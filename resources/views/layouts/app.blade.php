@@ -114,6 +114,15 @@
                     </a>
                     @endif
 
+                    <!-- Personal & Usuarios (Solo Admin) -->
+                    @if(auth()->user()->hasRole('Administrador'))
+                    <a href="{{ route('usuarios.index') }}" 
+                       class="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 {{ request()->routeIs('usuarios.*') ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100' }}">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                        <span>Personal & Usuarios</span>
+                    </a>
+                    @endif
+
                     <div class="pt-4">
                         <p class="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Integraciones</p>
                         <div class="mx-3 p-3 rounded-xl bg-slate-800/60 border border-slate-700/50">
@@ -128,20 +137,20 @@
             </div>
 
             <!-- Profile & Logout Section Footer -->
-            <div class="p-4 border-t border-slate-800 bg-slate-900/80">
-                <div class="flex items-center justify-between mb-3 px-2">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 rounded-full bg-indigo-600/30 border border-indigo-500/50 flex items-center justify-center text-indigo-400 font-bold text-sm">
+            <div class="p-4 border-t border-slate-800 bg-slate-900/80 space-y-2">
+                <a href="{{ route('perfil.index') }}" class="flex items-center justify-between p-2 rounded-xl hover:bg-slate-800 transition group">
+                    <div class="flex items-center space-x-3 overflow-hidden">
+                        <div class="w-9 h-9 rounded-full bg-indigo-600/30 border border-indigo-500/50 flex items-center justify-center text-indigo-400 font-bold text-xs shrink-0">
                             {{ substr(auth()->user()->nombres, 0, 1) }}{{ substr(auth()->user()->apellidos, 0, 1) }}
                         </div>
                         <div class="overflow-hidden">
-                            <p class="text-sm font-semibold text-white truncate">{{ auth()->user()->nombre_completo }}</p>
-                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                            <p class="text-xs font-semibold text-white truncate group-hover:text-blue-400 transition">{{ auth()->user()->nombre_completo }}</p>
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-semibold bg-blue-500/20 text-blue-300 border border-blue-500/30">
                                 {{ auth()->user()->role?->nombre }}
                             </span>
                         </div>
                     </div>
-                </div>
+                </a>
 
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf

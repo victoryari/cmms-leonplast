@@ -8,6 +8,8 @@ use App\Http\Controllers\WorkOrderController;
 use App\Http\Controllers\PreventivePlanController;
 use App\Http\Controllers\SparePartController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\ProfileController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -23,6 +25,10 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    // Auto-gestión de Perfil
+    Route::get('/perfil', [ProfileController::class, 'index'])->name('perfil.index');
+    Route::post('/perfil', [ProfileController::class, 'update'])->name('perfil.update');
 
     // Módulo de Gestión de Activos Industriales
     Route::middleware('role:Administrador,Gerente_Mantenimiento,Supervisor,Tecnico')->group(function () {
@@ -74,5 +80,17 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:Administrador,Gerente_Mantenimiento,Supervisor')->group(function () {
         Route::get('/reportes-kpi', [ReportController::class, 'index'])->name('reportes.index');
         Route::get('/reportes-kpi/exportar-csv', [ReportController::class, 'exportCsv'])->name('reportes.export-csv');
+    });
+
+    // Módulo de Gestión de Usuarios & Personal de Planta (Solo Administrador)
+    Route::middleware('role:Administrador')->group(function () {
+        Route::get('/usuarios', [UserController::class, 'index'])->name('usuarios.index');
+        Route::get('/usuarios/crear', [UserController::class, 'create'])->name('usuarios.create');
+        Route::post('/usuarios', [UserController::class, 'store'])->name('usuarios.store');
+        Route::get('/usuarios/{id}', [UserController::class, 'show'])->name('usuarios.show');
+        Route::get('/usuarios/{id}/editar', [UserController::class, 'edit'])->name('usuarios.edit');
+        Route::put('/usuarios/{id}', [UserController::class, 'update'])->name('usuarios.update');
+        Route::post('/usuarios/{id}/toggle-status', [UserController::class, 'toggleStatus'])->name('usuarios.toggle-status');
+        Route::post('/usuarios/{id}/restablecer-clave', [UserController::class, 'resetPassword'])->name('usuarios.reset-password');
     });
 });
