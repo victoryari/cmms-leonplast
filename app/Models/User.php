@@ -2,48 +2,132 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
+    protected $table = 'usuarios';
+
     protected $fillable = [
-        'name',
+        'rol_id',
+        'nombres',
+        'apellidos',
+        'documento_identidad',
+        'telefono',
         'email',
-        'password',
+        'direccion',
+        'password_hash',
+        'codigo_empleado',
+        'especialidad',
+        'fecha_ingreso',
+        'activo',
+        'email_verificado',
+        'ultimo_acceso',
+        'foto_perfil',
+        'preferencias',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
-        'password',
-        'remember_token',
+        'password_hash',
+    ];
+
+    protected $casts = [
+        'activo' => 'boolean',
+        'email_verificado' => 'boolean',
+        'fecha_ingreso' => 'date',
+        'ultimo_acceso' => 'datetime',
+        'preferencias' => 'array',
     ];
 
     /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
+     * Sobrescribir el campo de contraseña para la autenticación de Laravel
      */
-    protected function casts(): array
+    public function getAuthPasswordName(): string
     {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
+        return 'password_hash';
+    }
+
+    public function getAuthPassword(): string
+    {
+        return $this->password_hash;
+    }
+
+    /**
+     * Accesor para el nombre completo
+     */
+    public function getNombreCompletoAttribute(): string
+    {
+        return "{$this->nombres} {$this->apellidos}";
+    }
+
+    /**
+     * Relación con la tabla roles
+     */
+    public function role(): BelongsTo
+    {
+        return $this->belongsTo(Role::class, 'rol_id');
+    }
+
+    /**
+     * Helper para verificar roles
+     */
+    public function hasRole(string|array $roles): bool
+    {
+        if (!$this->relationLoaded('role')) {
+            $this->load('role');
+        }
+
+        $roleName = $this->role?->nombre;
+        if (!$roleName) {
+            return false;
+        }
+
+        if (is_array($roles)) {
+            return in_array($roleName, $roles, true);
+        }
+
+        return $roleName === $roles;
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->hasRole('Administrador');
+    }
+
+    public function isManager(): bool
+    {
+        return $this->hasRole('Gerente_Mantenimiento');
+    }
+
+    public function isSupervisor(): bool
+    {
+        return $this->hasRole('Supervisor');
+    }
+
+    public function isTechnician(): bool
+    {
+        return $this->hasRole('Tecnico');
+    }
+
+    public function isRequester(): bool
+    {
+        return $this->hasRole('Solicitante');
+    }
+
+    public function ordenesSolicitadas(): HasMany
+    {
+        return $this->hasMany(WorkOrder::class, 'solicitante_id');
+    }
+
+    public function ordenesAsignadas(): HasMany
+    {
+        return $this->hasMany(WorkOrder::class, 'tecnico_id');
     }
 }
