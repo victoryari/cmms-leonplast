@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\ApiAuthController;
 use App\Http\Controllers\Api\ApiWorkOrderController;
+use App\Http\Controllers\Api\ApiAssetController;
 
 Route::prefix('v1')->group(function () {
     // Autenticación API (App móvil Flutter)
@@ -13,10 +14,13 @@ Route::prefix('v1')->group(function () {
         Route::get('/auth/me', [ApiAuthController::class, 'me']);
         Route::post('/auth/logout', [ApiAuthController::class, 'logout']);
 
+        // Endpoints de Activos Industriales para Flutter
+        Route::get('/activos', [ApiAssetController::class, 'index']);
+        Route::get('/activos/qr/{codigo}', [ApiAssetController::class, 'findByQr']);
+        Route::get('/activos/{id}', [ApiAssetController::class, 'show']);
+        Route::post('/activos/{id}/estado', [ApiAssetController::class, 'updateStatus']);
+
         // Endpoints de Órdenes de Trabajo
         Route::get('/ordenes-trabajo', [ApiWorkOrderController::class, 'index']);
-
-        // Escaneo de QR de Activos
-        Route::get('/activos/qr/{codigo}', [ApiWorkOrderController::class, 'findAssetByQr']);
     });
 });

@@ -41,6 +41,11 @@ class Asset extends Model
         'observaciones',
     ];
 
+    protected $appends = [
+        'qr_image_url',
+        'estado_operativo_color',
+    ];
+
     protected $casts = [
         'activo' => 'boolean',
         'fecha_adquisicion' => 'date',
@@ -62,5 +67,29 @@ class Asset extends Model
     public function creador(): BelongsTo
     {
         return $this->belongsTo(User::class, 'creado_por');
+    }
+
+    /**
+     * Color para badge de estado operativo
+     */
+    public function getEstadoOperativoColorAttribute(): string
+    {
+        return match ($this->estado_operativo) {
+            'Operativo' => 'emerald',
+            'Mantenimiento' => 'amber',
+            'Reparacion' => 'rose',
+            'Fuera_de_servicio' => 'purple',
+            'Baja' => 'slate',
+            default => 'blue',
+        };
+    }
+
+    /**
+     * Generar URL para la imagen del código QR
+     */
+    public function getQrImageUrlAttribute(): string
+    {
+        $content = urlencode($this->qr_code_content ?? $this->codigo_activo);
+        return "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data={$content}";
     }
 }
