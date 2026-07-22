@@ -65,9 +65,10 @@
             <p class="text-[10px] text-slate-800 font-bold mt-1">Ubicación: {{ $activo->ubicacion ?? 'Planta Principal' }}</p>
         </div>
 
-        <!-- Safety Footer Notice -->
-        <div class="bg-amber-100 border border-amber-400 text-amber-900 p-2 rounded-lg text-center text-[9px] font-bold">
-            ⚠️ Escanear con la App Móvil CMMS antes de intervenir el equipo.
+        <!-- Safety & Public Request Footer Notice -->
+        <div class="bg-amber-100 border border-amber-400 text-amber-900 p-2 rounded-lg text-center text-[9px] font-bold space-y-0.5">
+            <p>📷 Escanear con la cámara del celular para Reportar Avería (Sin Login)</p>
+            <p class="font-mono text-[8px] text-amber-800">/solicitud-rapida/{{ $activo->codigo_qr ?? $activo->codigo_activo }}</p>
         </div>
 
     </div>

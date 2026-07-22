@@ -10,10 +10,16 @@ use App\Http\Controllers\SparePartController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PublicRequestController;
 
 Route::get('/', function () {
     return redirect()->route('login');
 });
+
+// Rutas públicas de Solicitud Rápida por Código QR (Sin necesidad de login)
+Route::get('/solicitud-rapida/{codigo_qr}', [PublicRequestController::class, 'create'])->name('public.create');
+Route::post('/solicitud-rapida/{codigo_qr}', [PublicRequestController::class, 'store'])->name('public.store');
+Route::get('/solicitud-rapida/rastreo/{codigo_ot}', [PublicRequestController::class, 'track'])->name('public.track');
 
 // Rutas de inicio de sesión
 Route::middleware('guest')->group(function () {

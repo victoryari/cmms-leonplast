@@ -75,7 +75,7 @@ class WorkOrder extends Model
         'historial_estados' => 'array',
     ];
 
-    public function activo(): BelongsTo
+    public function equipo(): BelongsTo
     {
         return $this->belongsTo(Asset::class, 'activo_id');
     }
