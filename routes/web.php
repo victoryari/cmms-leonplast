@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AssetController;
 use App\Http\Controllers\WorkOrderController;
+use App\Http\Controllers\PreventivePlanController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -46,10 +47,13 @@ Route::middleware('auth')->group(function () {
         Route::post('/ordenes-trabajo/{id}/calificar', [WorkOrderController::class, 'rate'])->name('ordenes.rate');
     });
 
-    // Mantenimiento Preventivo
-    Route::middleware('role:Administrador,Gerente_Mantenimiento,Supervisor')->group(function () {
-        Route::get('/planes-preventivos', function () {
-            return view('placeholder', ['title' => 'Planes de Mantenimiento Preventivo']);
-        })->name('planes.index');
+    // Mantenimiento Preventivo & Rutinas Programadas
+    Route::middleware('role:Administrador,Gerente_Mantenimiento,Supervisor,Tecnico')->group(function () {
+        Route::get('/planes-preventivos', [PreventivePlanController::class, 'index'])->name('planes.index');
+        Route::get('/planes-preventivos/crear', [PreventivePlanController::class, 'create'])->name('planes.create');
+        Route::post('/planes-preventivos', [PreventivePlanController::class, 'store'])->name('planes.store');
+        Route::get('/planes-preventivos/{id}', [PreventivePlanController::class, 'show'])->name('planes.show');
+        Route::post('/planes-preventivos/{id}/ejecutar', [PreventivePlanController::class, 'executeNow'])->name('planes.execute-now');
+        Route::post('/planes-preventivos/{id}/toggle-status', [PreventivePlanController::class, 'toggleStatus'])->name('planes.toggle-status');
     });
 });

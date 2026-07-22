@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             AssetSeeder::class,
             SparePartSeeder::class,
             WorkOrderSeeder::class,
+            PreventivePlanSeeder::class,
         ]);
     }
 }

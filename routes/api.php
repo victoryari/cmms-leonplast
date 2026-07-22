@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\ApiAuthController;
 use App\Http\Controllers\Api\ApiWorkOrderController;
 use App\Http\Controllers\Api\ApiAssetController;
+use App\Http\Controllers\Api\ApiPreventivePlanController;
 
 Route::prefix('v1')->group(function () {
     // Autenticación API (App móvil Flutter)
@@ -30,5 +31,10 @@ Route::prefix('v1')->group(function () {
         Route::post('/ordenes-trabajo/{id}/repuestos', [ApiWorkOrderController::class, 'addSparePart']);
         Route::post('/ordenes-trabajo/{id}/fotos', [ApiWorkOrderController::class, 'uploadPhoto']);
         Route::post('/ordenes-trabajo/{id}/completar', [ApiWorkOrderController::class, 'complete']);
+
+        // Endpoints de Mantenimiento Preventivo para Flutter
+        Route::get('/planes-preventivos', [ApiPreventivePlanController::class, 'index']);
+        Route::get('/planes-preventivos/{id}', [ApiPreventivePlanController::class, 'show']);
+        Route::post('/planes-preventivos/{id}/ejecutar', [ApiPreventivePlanController::class, 'executeNow']);
     });
 });
