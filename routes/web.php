@@ -7,6 +7,7 @@ use App\Http\Controllers\AssetController;
 use App\Http\Controllers\WorkOrderController;
 use App\Http\Controllers\PreventivePlanController;
 use App\Http\Controllers\SparePartController;
+use App\Http\Controllers\ReportController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -67,5 +68,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/repuestos/{id}/editar', [SparePartController::class, 'edit'])->name('repuestos.edit');
         Route::put('/repuestos/{id}', [SparePartController::class, 'update'])->name('repuestos.update');
         Route::post('/repuestos/{id}/movimiento', [SparePartController::class, 'registerMovement'])->name('repuestos.movimiento');
+    });
+
+    // Módulo de Reportes KPI & Analítica de Planta
+    Route::middleware('role:Administrador,Gerente_Mantenimiento,Supervisor')->group(function () {
+        Route::get('/reportes-kpi', [ReportController::class, 'index'])->name('reportes.index');
+        Route::get('/reportes-kpi/exportar-csv', [ReportController::class, 'exportCsv'])->name('reportes.export-csv');
     });
 });

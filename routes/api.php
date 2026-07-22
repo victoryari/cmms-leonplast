@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\ApiWorkOrderController;
 use App\Http\Controllers\Api\ApiAssetController;
 use App\Http\Controllers\Api\ApiPreventivePlanController;
 use App\Http\Controllers\Api\ApiSparePartController;
+use App\Http\Controllers\Api\ApiReportController;
 
 Route::prefix('v1')->group(function () {
     // Autenticación API (App móvil Flutter)
@@ -43,5 +44,10 @@ Route::prefix('v1')->group(function () {
         Route::get('/repuestos/alertas', [ApiSparePartController::class, 'alerts']);
         Route::get('/repuestos/{id}', [ApiSparePartController::class, 'show']);
         Route::post('/repuestos/{id}/movimiento', [ApiSparePartController::class, 'registerMovement']);
+
+        // Endpoints de Reportes KPI & Analítica para Flutter
+        Route::get('/reportes/kpis', [ApiReportController::class, 'kpis']);
+        Route::get('/reportes/pareto', [ApiReportController::class, 'pareto']);
+        Route::get('/reportes/activos', [ApiReportController::class, 'assets']);
     });
 });
