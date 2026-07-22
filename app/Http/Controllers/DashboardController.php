@@ -5,7 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Asset;
 use App\Models\WorkOrder;
-use App\Models\User;
+use App\Models\SparePart;
+use App\Models\PreventivePlan;
 
 class DashboardController extends Controller
 {
@@ -21,6 +22,9 @@ class DashboardController extends Controller
             'ots_pendientes' => WorkOrder::whereIn('estado', ['Pendiente', 'Aprobada'])->count(),
             'ots_en_progreso' => WorkOrder::where('estado', 'En_Progreso')->count(),
             'ots_completadas' => WorkOrder::where('estado', 'Completada')->count(),
+            'total_planes' => PreventivePlan::where('activo', true)->count(),
+            'total_repuestos' => SparePart::where('activo', true)->count(),
+            'alertas_repuestos' => SparePart::where('activo', true)->whereColumn('stock_actual', '<=', 'stock_minimo')->count(),
         ];
 
         $recentOrdersQuery = WorkOrder::with(['activo', 'solicitante', 'tecnico']);
