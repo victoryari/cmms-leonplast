@@ -54,7 +54,6 @@ class WorkOrder extends Model
     ];
 
     protected $casts = [
-        'activo' => 'boolean',
         'requiere_permiso_especial' => 'boolean',
         'fecha_solicitud' => 'datetime',
         'fecha_aprobacion' => 'datetime',
@@ -75,9 +74,22 @@ class WorkOrder extends Model
         'historial_estados' => 'array',
     ];
 
+    public function activo(): BelongsTo
+    {
+        return $this->belongsTo(Asset::class, 'activo_id');
+    }
+
     public function equipo(): BelongsTo
     {
         return $this->belongsTo(Asset::class, 'activo_id');
+    }
+
+    public function getActivoAttribute()
+    {
+        if ($this->relationLoaded('activo')) {
+            return $this->getRelation('activo');
+        }
+        return (bool) ($this->attributes['activo'] ?? true);
     }
 
     public function solicitante(): BelongsTo
