@@ -20,7 +20,11 @@ Route::prefix('v1')->group(function () {
         Route::get('/activos/{id}', [ApiAssetController::class, 'show']);
         Route::post('/activos/{id}/estado', [ApiAssetController::class, 'updateStatus']);
 
-        // Endpoints de Órdenes de Trabajo
+        // Endpoints de Órdenes de Trabajo para Flutter
         Route::get('/ordenes-trabajo', [ApiWorkOrderController::class, 'index']);
+        Route::get('/ordenes-trabajo/{id}', [ApiWorkOrderController::class, 'show']);
+        Route::post('/ordenes-trabajo/solicitar', [ApiWorkOrderController::class, 'store']);
+        Route::post('/ordenes-trabajo/{id}/cambiar-estado', [ApiWorkOrderController::class, 'updateStatus']);
+        Route::post('/ordenes-trabajo/{id}/completar', [ApiWorkOrderController::class, 'complete']);
     });
 });

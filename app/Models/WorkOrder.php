@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class WorkOrder extends Model
 {
@@ -45,6 +46,11 @@ class WorkOrder extends Model
         'historial_estados',
         'creado_por',
         'activo',
+    ];
+
+    protected $appends = [
+        'estado_color',
+        'prioridad_color',
     ];
 
     protected $casts = [
@@ -92,5 +98,41 @@ class WorkOrder extends Model
     public function creador(): BelongsTo
     {
         return $this->belongsTo(User::class, 'creado_por');
+    }
+
+    public function laborTimes(): HasMany
+    {
+        return $this->hasMany(LaborTime::class, 'orden_trabajo_id');
+    }
+
+    /**
+     * Helper para color de badge según el estado
+     */
+    public function getEstadoColorAttribute(): string
+    {
+        return match ($this->estado) {
+            'Pendiente' => 'amber',
+            'Aprobada' => 'blue',
+            'En_Progreso' => 'indigo',
+            'En_Pausa' => 'purple',
+            'En_Revision' => 'cyan',
+            'Completada' => 'emerald',
+            'Cancelada' => 'rose',
+            default => 'slate',
+        };
+    }
+
+    /**
+     * Helper para color de badge según la prioridad
+     */
+    public function getPrioridadColorAttribute(): string
+    {
+        return match ($this->prioridad) {
+            'Baja' => 'slate',
+            'Media' => 'blue',
+            'Alta' => 'amber',
+            'Crítica' => 'rose',
+            default => 'slate',
+        };
     }
 }

@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AssetController;
+use App\Http\Controllers\WorkOrderController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -32,17 +33,21 @@ Route::middleware('auth')->group(function () {
         Route::get('/activos/{id}/imprimir-qr', [AssetController::class, 'printQr'])->name('activos.print-qr');
     });
 
+    // Módulo de Órdenes de Trabajo (OTs)
+    Route::middleware('role:Administrador,Gerente_Mantenimiento,Supervisor,Tecnico,Solicitante')->group(function () {
+        Route::get('/ordenes-trabajo', [WorkOrderController::class, 'index'])->name('ordenes.index');
+        Route::get('/ordenes-trabajo/crear', [WorkOrderController::class, 'create'])->name('ordenes.create');
+        Route::post('/ordenes-trabajo', [WorkOrderController::class, 'store'])->name('ordenes.store');
+        Route::get('/ordenes-trabajo/{id}', [WorkOrderController::class, 'show'])->name('ordenes.show');
+        Route::post('/ordenes-trabajo/{id}/asignar', [WorkOrderController::class, 'assign'])->name('ordenes.assign');
+        Route::post('/ordenes-trabajo/{id}/estado', [WorkOrderController::class, 'updateStatus'])->name('ordenes.update-status');
+        Route::post('/ordenes-trabajo/{id}/calificar', [WorkOrderController::class, 'rate'])->name('ordenes.rate');
+    });
+
     // Mantenimiento Preventivo
     Route::middleware('role:Administrador,Gerente_Mantenimiento,Supervisor')->group(function () {
         Route::get('/planes-preventivos', function () {
             return view('placeholder', ['title' => 'Planes de Mantenimiento Preventivo']);
         })->name('planes.index');
-    });
-
-    // Órdenes de trabajo
-    Route::middleware('role:Administrador,Gerente_Mantenimiento,Supervisor,Tecnico,Solicitante')->group(function () {
-        Route::get('/ordenes-trabajo', function () {
-            return view('placeholder', ['title' => 'Órdenes de Trabajo (OTs)']);
-        })->name('ordenes.index');
     });
 });
