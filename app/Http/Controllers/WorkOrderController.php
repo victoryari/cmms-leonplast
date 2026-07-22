@@ -6,7 +6,9 @@ use Illuminate\Http\Request;
 use App\Models\WorkOrder;
 use App\Models\Asset;
 use App\Models\User;
-use Illuminate\Support\Str;
+use App\Models\SparePart;
+use App\Models\WorkOrderSparePart;
+use Illuminate\Support\Facades\Storage;
 
 class WorkOrderController extends Controller
 {
@@ -15,14 +17,12 @@ class WorkOrderController extends Controller
         $user = $request->user();
         $query = WorkOrder::with(['activo', 'solicitante', 'tecnico', 'supervisor'])->where('activo', true);
 
-        // Scoping según el rol del usuario autenticado
         if ($user->isTechnician()) {
             $query->where('tecnico_id', $user->id);
         } elseif ($user->isRequester()) {
             $query->where('solicitante_id', $user->id);
         }
 
-        // Filtro por búsqueda de texto
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('titulo', 'like', "%{$search}%")
@@ -34,24 +34,20 @@ class WorkOrderController extends Controller
             });
         }
 
-        // Filtro por estado
         if ($estado = $request->input('estado')) {
             $query->where('estado', $estado);
         }
 
-        // Filtro por prioridad
         if ($prioridad = $request->input('prioridad')) {
             $query->where('prioridad', $prioridad);
         }
 
-        // Filtro por tipo de OT
         if ($tipo = $request->input('tipo_ot')) {
             $query->where('tipo_ot', $tipo);
         }
 
         $ordenes = $query->orderBy('updated_at', 'desc')->paginate(12)->withQueryString();
 
-        // Métricas globales o del usuario
         $metricsQuery = WorkOrder::where('activo', true);
         if ($user->isTechnician()) {
             $metricsQuery->where('tecnico_id', $user->id);
@@ -107,13 +103,18 @@ class WorkOrderController extends Controller
     public function show($id)
     {
         $user = auth()->user();
-        $ot = WorkOrder::with(['activo', 'solicitante', 'tecnico', 'supervisor', 'laborTimes.tecnico'])->findOrFail($id);
+        $ot = WorkOrder::with([
+            'activo', 'solicitante', 'tecnico', 'supervisor', 
+            'laborTimes.tecnico', 'spareParts.repuesto'
+        ])->findOrFail($id);
 
         $tecnicos = User::whereHas('role', function ($q) {
             $q->where('nombre', 'Tecnico');
         })->where('activo', true)->get();
 
-        return view('ordenes.show', compact('ot', 'tecnicos', 'user'));
+        $repuestosAlmacen = SparePart::where('activo', true)->where('stock_actual', '>', 0)->get();
+
+        return view('ordenes.show', compact('ot', 'tecnicos', 'repuestosAlmacen', 'user'));
     }
 
     public function assign(Request $request, $id)
@@ -183,6 +184,83 @@ class WorkOrderController extends Controller
 
         return redirect()->route('ordenes.show', $ot->id)
             ->with('success', "Estado de la OT {$ot->codigo_ot} actualizado a " . str_replace('_', ' ', $validated['estado']));
+    }
+
+    public function addSparePart(Request $request, $id)
+    {
+        $ot = WorkOrder::findOrFail($id);
+
+        $validated = $request->validate([
+            'repuesto_id' => 'required|exists:repuestos,id',
+            'cantidad' => 'required|integer|min:1',
+            'motivo_uso' => 'nullable|string',
+        ]);
+
+        $repuesto = SparePart::findOrFail($validated['repuesto_id']);
+
+        if ($repuesto->stock_actual < $validated['cantidad']) {
+            return back()->with('error', "Stock insuficiente de {$repuesto->nombre}. Disponible: {$repuesto->stock_actual}");
+        }
+
+        $existingItem = WorkOrderSparePart::where('orden_trabajo_id', $ot->id)
+            ->where('repuesto_id', $repuesto->id)
+            ->first();
+
+        if ($existingItem) {
+            $newCantidad = $existingItem->cantidad + $validated['cantidad'];
+            $existingItem->update([
+                'cantidad' => $newCantidad,
+                'total' => $newCantidad * $repuesto->costo_unitario,
+                'motivo_uso' => $validated['motivo_uso'] ?? $existingItem->motivo_uso,
+            ]);
+        } else {
+            WorkOrderSparePart::create([
+                'orden_trabajo_id' => $ot->id,
+                'repuesto_id' => $repuesto->id,
+                'cantidad' => $validated['cantidad'],
+                'costo_unitario' => $repuesto->costo_unitario,
+                'total' => $validated['cantidad'] * $repuesto->costo_unitario,
+                'motivo_uso' => $validated['motivo_uso'],
+            ]);
+        }
+
+        // Descontar stock del almacén
+        $repuesto->decrement('stock_actual', $validated['cantidad']);
+
+        // Recalcular costo total de repuestos en la OT
+        $costoTotalRepuestos = $ot->spareParts()->sum('total');
+        $ot->update([
+            'costo_repuestos' => $costoTotalRepuestos,
+            'costo_real' => $costoTotalRepuestos + ($ot->costo_mano_obra ?? 0),
+        ]);
+
+        return redirect()->route('ordenes.show', $ot->id)
+            ->with('success', "Repuesto {$repuesto->nombre} asignado a la OT {$ot->codigo_ot} ({$validated['cantidad']} unidades).");
+    }
+
+    public function uploadPhoto(Request $request, $id)
+    {
+        $ot = WorkOrder::findOrFail($id);
+
+        $request->validate([
+            'tipo_foto' => 'required|in:antes,despues',
+            'foto' => 'required|image|max:10240',
+        ]);
+
+        $tipo = $request->input('tipo_foto');
+        $path = $request->file('foto')->store('fotos_ot', 'public');
+        $publicUrl = Storage::url($path);
+
+        $fotos = $ot->fotos ?? ['antes' => [], 'despues' => []];
+        if (!isset($fotos['antes'])) $fotos['antes'] = [];
+        if (!isset($fotos['despues'])) $fotos['despues'] = [];
+
+        $fotos[$tipo][] = $publicUrl;
+
+        $ot->update(['fotos' => $fotos]);
+
+        return redirect()->route('ordenes.show', $ot->id)
+            ->with('success', "Fotografía ({$tipo}) registrada correctamente en la OT.");
     }
 
     public function rate(Request $request, $id)

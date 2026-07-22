@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             AssetCategorySeeder::class,
             AssetSeeder::class,
+            SparePartSeeder::class,
             WorkOrderSeeder::class,
         ]);
     }

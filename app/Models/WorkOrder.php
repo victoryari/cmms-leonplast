@@ -105,6 +105,11 @@ class WorkOrder extends Model
         return $this->hasMany(LaborTime::class, 'orden_trabajo_id');
     }
 
+    public function spareParts(): HasMany
+    {
+        return $this->hasMany(WorkOrderSparePart::class, 'orden_trabajo_id');
+    }
+
     /**
      * Helper para color de badge según el estado
      */

@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\WorkOrder;
-use App\Models\Asset;
+use App\Models\SparePart;
+use App\Models\WorkOrderSparePart;
+use Illuminate\Support\Facades\Storage;
 
 class ApiWorkOrderController extends Controller
 {
@@ -13,7 +15,7 @@ class ApiWorkOrderController extends Controller
     {
         $user = $request->user();
         
-        $query = WorkOrder::with(['activo', 'solicitante', 'supervisor', 'tecnico'])->where('activo', true);
+        $query = WorkOrder::with(['activo', 'solicitante', 'supervisor', 'tecnico', 'spareParts.repuesto'])->where('activo', true);
 
         if ($user->isTechnician()) {
             $query->where('tecnico_id', $user->id);
@@ -39,7 +41,7 @@ class ApiWorkOrderController extends Controller
 
     public function show($id)
     {
-        $ot = WorkOrder::with(['activo', 'solicitante', 'tecnico', 'supervisor', 'laborTimes'])->find($id);
+        $ot = WorkOrder::with(['activo', 'solicitante', 'tecnico', 'supervisor', 'laborTimes', 'spareParts.repuesto'])->find($id);
 
         if (!$ot) {
             return response()->json(['success' => false, 'message' => 'Orden de trabajo no encontrada.'], 404);
@@ -113,6 +115,91 @@ class ApiWorkOrderController extends Controller
             'success' => true,
             'message' => "Estado de la OT {$ot->codigo_ot} actualizado a {$ot->estado}.",
             'data' => $ot
+        ]);
+    }
+
+    public function addSparePart(Request $request, $id)
+    {
+        $request->validate([
+            'repuesto_id' => 'required|exists:repuestos,id',
+            'cantidad' => 'required|integer|min:1',
+            'motivo_uso' => 'nullable|string',
+        ]);
+
+        $ot = WorkOrder::find($id);
+        if (!$ot) return response()->json(['success' => false, 'message' => 'OT no encontrada.'], 404);
+
+        $repuesto = SparePart::findOrFail($request->input('repuesto_id'));
+
+        if ($repuesto->stock_actual < $request->input('cantidad')) {
+            return response()->json(['success' => false, 'message' => "Stock insuficiente de {$repuesto->nombre}. Disponible: {$repuesto->stock_actual}"], 400);
+        }
+
+        $existingItem = WorkOrderSparePart::where('orden_trabajo_id', $ot->id)
+            ->where('repuesto_id', $repuesto->id)
+            ->first();
+
+        if ($existingItem) {
+            $newCantidad = $existingItem->cantidad + $request->input('cantidad');
+            $existingItem->update([
+                'cantidad' => $newCantidad,
+                'total' => $newCantidad * $repuesto->costo_unitario,
+                'motivo_uso' => $request->input('motivo_uso', $existingItem->motivo_uso),
+            ]);
+            $item = $existingItem;
+        } else {
+            $item = WorkOrderSparePart::create([
+                'orden_trabajo_id' => $ot->id,
+                'repuesto_id' => $repuesto->id,
+                'cantidad' => $request->input('cantidad'),
+                'costo_unitario' => $repuesto->costo_unitario,
+                'total' => $request->input('cantidad') * $repuesto->costo_unitario,
+                'motivo_uso' => $request->input('motivo_uso'),
+            ]);
+        }
+
+        $repuesto->decrement('stock_actual', $request->input('cantidad'));
+
+        $costoTotalRepuestos = $ot->spareParts()->sum('total');
+        $ot->update([
+            'costo_repuestos' => $costoTotalRepuestos,
+            'costo_real' => $costoTotalRepuestos + ($ot->costo_mano_obra ?? 0),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Repuesto {$repuesto->nombre} registrado en la OT {$ot->codigo_ot}.",
+            'data' => $item
+        ]);
+    }
+
+    public function uploadPhoto(Request $request, $id)
+    {
+        $request->validate([
+            'tipo_foto' => 'required|in:antes,despues',
+            'foto' => 'required|image|max:10240',
+        ]);
+
+        $ot = WorkOrder::find($id);
+        if (!$ot) return response()->json(['success' => false, 'message' => 'OT no encontrada.'], 404);
+
+        $tipo = $request->input('tipo_foto');
+        $path = $request->file('foto')->store('fotos_ot', 'public');
+        $publicUrl = Storage::url($path);
+
+        $fotos = $ot->fotos ?? ['antes' => [], 'despues' => []];
+        if (!isset($fotos['antes'])) $fotos['antes'] = [];
+        if (!isset($fotos['despues'])) $fotos['despues'] = [];
+
+        $fotos[$tipo][] = $publicUrl;
+
+        $ot->update(['fotos' => $fotos]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Fotografía ({$tipo}) adjuntada exitosamente a la OT {$ot->codigo_ot}.",
+            'foto_url' => $publicUrl,
+            'fotos' => $fotos
         ]);
     }
 

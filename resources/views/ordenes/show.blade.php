@@ -3,7 +3,7 @@
 @section('title', "Orden de Trabajo: {$ot->codigo_ot}")
 
 @section('content')
-<div class="space-y-6">
+<div class="space-y-6" x-data="{ addSpareModal: false, uploadPhotoModal: false, photoType: 'antes' }">
 
     <!-- Top Navigation & Status Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -65,14 +65,14 @@
     <!-- Main Grid Content -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        <!-- Left 2 Cols: Details, Diagnosis, Solution & Rating -->
+        <!-- Left 2 Cols: Details, Photos, Spare Parts, Diagnosis & Rating -->
         <div class="lg:col-span-2 space-y-6">
 
             <!-- Asset & Description Card -->
             <div class="p-6 rounded-3xl bg-slate-900 border border-slate-800 space-y-4">
                 <h3 class="text-sm font-bold text-white uppercase tracking-wider text-blue-400 flex items-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-                    <span>Activo Afectado y Descripción de la Falla</span>
+                    <span>Activo Afectado y Requerimiento</span>
                 </h3>
 
                 <div class="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 flex items-center justify-between">
@@ -84,7 +84,7 @@
 
                     @if($ot->activo)
                     <a href="{{ route('activos.show', $ot->activo->id) }}" class="px-3 py-1.5 rounded-xl bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold border border-slate-700">
-                        Ver Ficha Máquina
+                        Ver Máquina
                     </a>
                     @endif
                 </div>
@@ -92,6 +92,117 @@
                 <div class="space-y-1">
                     <span class="text-[10px] font-semibold text-slate-500 uppercase">Detalle del Requerimiento:</span>
                     <p class="text-xs text-slate-300 leading-relaxed bg-slate-950 p-4 rounded-2xl border border-slate-800/80">{{ $ot->descripcion }}</p>
+                </div>
+            </div>
+
+            <!-- FOTOS ANTES Y DESPUÉS DE LA REPARACIÓN -->
+            <div class="p-6 rounded-3xl bg-slate-900 border border-slate-800 space-y-4">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-sm font-bold text-white uppercase tracking-wider text-cyan-400 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                        <span>Evidencia Fotográfica (Antes / Después)</span>
+                    </h3>
+
+                    @if(auth()->user()->isTechnician() || auth()->user()->hasRole(['Administrador', 'Supervisor', 'Gerente_Mantenimiento']))
+                    <button @click="uploadPhotoModal = true" class="px-3 py-1.5 rounded-xl bg-cyan-600/20 text-cyan-300 hover:bg-cyan-600 hover:text-white border border-cyan-500/30 text-xs font-semibold transition">
+                        + Adjuntar Foto
+                    </button>
+                    @endif
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Column: Fotos ANTES -->
+                    <div class="p-4 rounded-2xl bg-slate-950/60 border border-rose-500/20 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-rose-400 uppercase">🔴 Fotos ANTES de la Reparación</span>
+                            <span class="text-[10px] text-slate-500 font-mono">{{ count($ot->fotos['antes'] ?? []) }} fotos</span>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2">
+                            @forelse($ot->fotos['antes'] ?? [] as $imgUrl)
+                            <a href="{{ $imgUrl }}" target="_blank" class="group relative rounded-xl overflow-hidden border border-slate-800 bg-slate-900 block aspect-square">
+                                <img src="{{ $imgUrl }}" alt="Foto antes" class="w-full h-full object-cover group-hover:scale-105 transition">
+                            </a>
+                            @empty
+                            <div class="col-span-2 py-6 text-center text-slate-600 text-xs italic">
+                                Sin fotos del estado inicial de la avería.
+                            </div>
+                            @endforelse
+                        </div>
+                    </div>
+
+                    <!-- Column: Fotos DESPUÉS -->
+                    <div class="p-4 rounded-2xl bg-slate-950/60 border border-emerald-500/20 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-emerald-400 uppercase">🟢 Fotos DESPUÉS de la Reparación</span>
+                            <span class="text-[10px] text-slate-500 font-mono">{{ count($ot->fotos['despues'] ?? []) }} fotos</span>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2">
+                            @forelse($ot->fotos['despues'] ?? [] as $imgUrl)
+                            <a href="{{ $imgUrl }}" target="_blank" class="group relative rounded-xl overflow-hidden border border-slate-800 bg-slate-900 block aspect-square">
+                                <img src="{{ $imgUrl }}" alt="Foto después" class="w-full h-full object-cover group-hover:scale-105 transition">
+                            </a>
+                            @empty
+                            <div class="col-span-2 py-6 text-center text-slate-600 text-xs italic">
+                                Sin fotos del resultado final de la reparación.
+                            </div>
+                            @endforelse
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- REPUESTOS UTILIZADOS EN LA OT -->
+            <div class="p-6 rounded-3xl bg-slate-900 border border-slate-800 space-y-4">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-sm font-bold text-white uppercase tracking-wider text-amber-400 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                        <span>Repuestos e Insumos de Almacén Utilizados</span>
+                    </h3>
+
+                    @if(auth()->user()->isTechnician() || auth()->user()->hasRole(['Administrador', 'Supervisor', 'Gerente_Mantenimiento']))
+                    <button @click="addSpareModal = true" class="px-3 py-1.5 rounded-xl bg-amber-600/20 text-amber-300 hover:bg-amber-600 hover:text-white border border-amber-500/30 text-xs font-semibold transition">
+                        + Asignar Repuesto
+                    </button>
+                    @endif
+                </div>
+
+                <div class="overflow-x-auto rounded-2xl border border-slate-800">
+                    <table class="w-full text-left text-xs border-collapse">
+                        <thead class="bg-slate-950 text-slate-400 font-semibold uppercase">
+                            <tr>
+                                <th class="p-3">SKU / Repuesto</th>
+                                <th class="p-3 text-center">Cantidad</th>
+                                <th class="p-3 text-right">Costo Unit.</th>
+                                <th class="p-3 text-right">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800/60">
+                            @forelse($ot->spareParts as $sp)
+                            <tr class="hover:bg-slate-800/40">
+                                <td class="p-3">
+                                    <span class="font-mono text-amber-400 font-bold block text-[11px]">{{ $sp->repuesto?->codigo_sku }}</span>
+                                    <span class="text-white font-medium">{{ $sp->repuesto?->nombre }}</span>
+                                    @if($sp->motivo_uso)<p class="text-[10px] text-slate-500 italic">{{ $sp->motivo_uso }}</p>@endif
+                                </td>
+                                <td class="p-3 text-center font-bold text-white">{{ $sp->cantidad }} un.</td>
+                                <td class="p-3 text-right font-mono text-slate-300">${{ number_format($sp->costo_unitario, 2) }}</td>
+                                <td class="p-3 text-right font-mono font-bold text-amber-400">${{ number_format($sp->total, 2) }}</td>
+                            </tr>
+                            @empty
+                            <tr>
+                                <td colspan="4" class="p-6 text-center text-slate-500 italic">No se han registrado repuestos utilizados para esta intervención.</td>
+                            </tr>
+                            @endforelse
+                        </tbody>
+                        <tfoot class="bg-slate-950 font-bold">
+                            <tr>
+                                <td colspan="3" class="p-3 text-right text-slate-400 uppercase text-[10px]">Costo Total Repuestos:</td>
+                                <td class="p-3 text-right font-mono text-amber-400 text-sm">${{ number_format($ot->costo_repuestos ?? 0, 2) }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
                 </div>
             </div>
 
@@ -245,60 +356,90 @@
                     </div>
                 </div>
 
-                <!-- Supervisor Assignment Box if Pending -->
-                @if(!$ot->tecnico_id && auth()->user()->hasRole(['Administrador', 'Gerente_Mantenimiento', 'Supervisor']))
-                <div class="pt-2">
-                    <form method="POST" action="{{ route('ordenes.assign', $ot->id) }}" class="space-y-3 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30">
-                        @csrf
-                        <span class="text-xs font-bold text-amber-300 block">Aprobar y Asignar Técnico</span>
-                        <select name="tecnico_id" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs text-white">
-                            <option value="">Seleccione Técnico</option>
-                            @foreach($tecnicos as $tec)
-                            <option value="{{ $tec->id }}">{{ $tec->nombre_completo }}</option>
-                            @endforeach
-                        </select>
-
-                        <input type="hidden" name="prioridad" value="{{ $ot->prioridad }}">
-
-                        <button type="submit" class="w-full py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition">
-                            Asignar y Aprobar
-                        </button>
-                    </form>
-                </div>
-                @endif
-            </div>
-
-            <!-- Safety Checklist & Special Permits Card -->
-            @if($ot->requiere_permiso_especial || !empty($ot->checklist_seguridad))
-            <div class="p-6 rounded-3xl bg-slate-900 border border-slate-800 space-y-3 text-xs">
-                <h4 class="font-bold text-rose-400 uppercase text-[11px] flex items-center gap-1.5">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                    <span>Seguridad y Permisos Especiales</span>
-                </h4>
-
-                @if($ot->permisos_especiales)
-                <div class="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300">
-                    <span class="block text-[10px] uppercase font-bold">Permiso Requerido:</span>
-                    <p class="font-medium mt-0.5">{{ $ot->permisos_especiales }}</p>
-                </div>
-                @endif
-
-                @if(!empty($ot->checklist_seguridad))
-                <div class="space-y-1.5 pt-1">
-                    <span class="text-[10px] text-slate-500 uppercase font-semibold block">Lista de Chequeo LOTO / EPP:</span>
-                    @foreach($ot->checklist_seguridad as $item => $estadoCheck)
-                    <div class="flex items-center space-x-2 text-slate-300">
-                        <span class="text-emerald-400 font-bold">✓</span>
-                        <span>{{ $item }}</span>
+                <!-- Cost Summary -->
+                <div class="pt-3 border-t border-slate-800 space-y-1.5">
+                    <div class="flex justify-between text-slate-400">
+                        <span>Mano de Obra:</span>
+                        <span class="font-mono text-white">${{ number_format($ot->costo_mano_obra ?? 0, 2) }}</span>
                     </div>
-                    @endforeach
+                    <div class="flex justify-between text-slate-400">
+                        <span>Repuestos:</span>
+                        <span class="font-mono text-amber-400">${{ number_format($ot->costo_repuestos ?? 0, 2) }}</span>
+                    </div>
+                    <div class="flex justify-between text-white font-bold pt-1 border-t border-slate-800">
+                        <span>Costo Total:</span>
+                        <span class="font-mono text-emerald-400 text-sm">${{ number_format($ot->costo_real ?? 0, 2) }}</span>
+                    </div>
                 </div>
-                @endif
             </div>
-            @endif
 
         </div>
 
+    </div>
+
+    <!-- MODAL: ASIGNAR REPUESTO DE ALMACÉN -->
+    <div x-show="addSpareModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm" x-cloak>
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <h3 class="text-base font-bold text-white">Asignar Repuesto a <span class="text-amber-400 font-mono">{{ $ot->codigo_ot }}</span></h3>
+            
+            <form action="{{ route('ordenes.add-spare-part', $ot->id) }}" method="POST" class="space-y-4">
+                @csrf
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Seleccionar Repuesto de Almacén *</label>
+                    <select name="repuesto_id" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white">
+                        <option value="">Seleccione Repuesto</option>
+                        @foreach($repuestosAlmacen as $rep)
+                        <option value="{{ $rep->id }}">
+                            [{{ $rep->codigo_sku }}] {{ $rep->nombre }} (Stock: {{ $rep->stock_actual }} un. | ${{ number_format($rep->costo_unitario, 2) }})
+                        </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Cantidad Utilizada *</label>
+                    <input type="number" name="cantidad" value="1" min="1" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Motivo de Uso / Observación</label>
+                    <input type="text" name="motivo_uso" placeholder="Ej: Reemplazo por desgaste por horas de uso" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white">
+                </div>
+
+                <div class="flex items-center justify-end space-x-2 pt-2">
+                    <button type="button" @click="addSpareModal = false" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">Cancelar</button>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-lg">Agregar y Descontar Stock</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: ADJUNTAR FOTO (ANTES / DESPUÉS) -->
+    <div x-show="uploadPhotoModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm" x-cloak>
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <h3 class="text-base font-bold text-white">Adjuntar Evidencia Fotográfica</h3>
+            
+            <form action="{{ route('ordenes.upload-photo', $ot->id) }}" method="POST" enctype="multipart/form-data" class="space-y-4">
+                @csrf
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Etiqueta de la Foto *</label>
+                    <select name="tipo_foto" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white">
+                        <option value="antes">🔴 Foto ANTES de la Reparación (Estado inicial)</option>
+                        <option value="despues">🟢 Foto DESPUÉS de la Reparación (Trabajo completado)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Seleccionar Imagen (JPG, PNG) *</label>
+                    <input type="file" name="foto" accept="image/*" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs text-slate-300">
+                </div>
+
+                <div class="flex items-center justify-end space-x-2 pt-2">
+                    <button type="button" @click="uploadPhotoModal = false" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">Cancelar</button>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs shadow-lg shadow-cyan-600/30">Subir Fotografía</button>
+                </div>
+            </form>
+        </div>
     </div>
 
 </div>
