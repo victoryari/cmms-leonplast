@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\ApiAuthController;
 use App\Http\Controllers\Api\ApiWorkOrderController;
 use App\Http\Controllers\Api\ApiAssetController;
 use App\Http\Controllers\Api\ApiPreventivePlanController;
+use App\Http\Controllers\Api\ApiSparePartController;
 
 Route::prefix('v1')->group(function () {
     // Autenticación API (App móvil Flutter)
@@ -36,5 +37,11 @@ Route::prefix('v1')->group(function () {
         Route::get('/planes-preventivos', [ApiPreventivePlanController::class, 'index']);
         Route::get('/planes-preventivos/{id}', [ApiPreventivePlanController::class, 'show']);
         Route::post('/planes-preventivos/{id}/ejecutar', [ApiPreventivePlanController::class, 'executeNow']);
+
+        // Endpoints de Inventario de Repuestos para Flutter
+        Route::get('/repuestos', [ApiSparePartController::class, 'index']);
+        Route::get('/repuestos/alertas', [ApiSparePartController::class, 'alerts']);
+        Route::get('/repuestos/{id}', [ApiSparePartController::class, 'show']);
+        Route::post('/repuestos/{id}/movimiento', [ApiSparePartController::class, 'registerMovement']);
     });
 });

@@ -6,6 +6,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AssetController;
 use App\Http\Controllers\WorkOrderController;
 use App\Http\Controllers\PreventivePlanController;
+use App\Http\Controllers\SparePartController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -55,5 +56,16 @@ Route::middleware('auth')->group(function () {
         Route::get('/planes-preventivos/{id}', [PreventivePlanController::class, 'show'])->name('planes.show');
         Route::post('/planes-preventivos/{id}/ejecutar', [PreventivePlanController::class, 'executeNow'])->name('planes.execute-now');
         Route::post('/planes-preventivos/{id}/toggle-status', [PreventivePlanController::class, 'toggleStatus'])->name('planes.toggle-status');
+    });
+
+    // Módulo de Gestión de Inventario de Repuestos & Almacén
+    Route::middleware('role:Administrador,Gerente_Mantenimiento,Supervisor,Tecnico')->group(function () {
+        Route::get('/repuestos', [SparePartController::class, 'index'])->name('repuestos.index');
+        Route::get('/repuestos/crear', [SparePartController::class, 'create'])->name('repuestos.create');
+        Route::post('/repuestos', [SparePartController::class, 'store'])->name('repuestos.store');
+        Route::get('/repuestos/{id}', [SparePartController::class, 'show'])->name('repuestos.show');
+        Route::get('/repuestos/{id}/editar', [SparePartController::class, 'edit'])->name('repuestos.edit');
+        Route::put('/repuestos/{id}', [SparePartController::class, 'update'])->name('repuestos.update');
+        Route::post('/repuestos/{id}/movimiento', [SparePartController::class, 'registerMovement'])->name('repuestos.movimiento');
     });
 });
