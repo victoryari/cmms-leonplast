@@ -22,7 +22,9 @@ Route::prefix('v1')->group(function () {
 
         // Endpoints de Órdenes de Trabajo para Flutter
         Route::get('/ordenes-trabajo', [ApiWorkOrderController::class, 'index']);
+        Route::get('/ordenes-trabajo/sync', [ApiWorkOrderController::class, 'sync']);
         Route::get('/ordenes-trabajo/{id}', [ApiWorkOrderController::class, 'show']);
+        Route::get('/ordenes-trabajo/{id}/historial', [ApiWorkOrderController::class, 'history']);
         Route::post('/ordenes-trabajo/solicitar', [ApiWorkOrderController::class, 'store']);
         Route::post('/ordenes-trabajo/{id}/cambiar-estado', [ApiWorkOrderController::class, 'updateStatus']);
         Route::post('/ordenes-trabajo/{id}/repuestos', [ApiWorkOrderController::class, 'addSparePart']);

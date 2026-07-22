@@ -95,6 +95,7 @@ class WorkOrderController extends Controller
         $validated['fecha_solicitud'] = now();
 
         $ot = WorkOrder::create($validated);
+        $ot->registrarCambioEstado('Pendiente', 'Solicitud registrada desde Panel Web', auth()->id());
 
         return redirect()->route('ordenes.show', $ot->id)
             ->with('success', "Solicitud de Orden de Trabajo {$ot->codigo_ot} registrada correctamente.");
@@ -127,14 +128,17 @@ class WorkOrderController extends Controller
             'duracion_estimada_horas' => 'nullable|numeric|min:0.5',
         ]);
 
+        $tecnico = User::find($validated['tecnico_id']);
+
         $ot->update([
             'tecnico_id' => $validated['tecnico_id'],
             'prioridad' => $validated['prioridad'],
             'duracion_estimada_horas' => $validated['duracion_estimada_horas'] ?? $ot->duracion_estimada_horas,
             'supervisor_id' => auth()->id(),
-            'estado' => 'Aprobada',
             'fecha_aprobacion' => now(),
         ]);
+
+        $ot->registrarCambioEstado('Aprobada', "Asignado a técnico: {$tecnico->nombre_completo}", auth()->id());
 
         return redirect()->route('ordenes.show', $ot->id)
             ->with('success', "Técnico asignado y OT {$ot->codigo_ot} aprobada para ejecución.");
@@ -152,38 +156,40 @@ class WorkOrderController extends Controller
             'observaciones_tecnico' => 'nullable|string',
         ]);
 
-        $updateData = [
-            'estado' => $validated['estado'],
-            'observaciones_tecnico' => $validated['observaciones_tecnico'] ?? $ot->observaciones_tecnico,
-        ];
+        $nuevoEstado = $validated['estado'];
 
-        if ($validated['estado'] === 'En_Progreso' && !$ot->fecha_inicio) {
-            $updateData['fecha_inicio'] = now();
+        if ($nuevoEstado === 'En_Progreso' && !$ot->fecha_inicio) {
+            $ot->fecha_inicio = now();
         }
 
-        if (in_array($validated['estado'], ['Completada', 'En_Revision'])) {
-            $updateData['fecha_fin_real'] = now();
+        if (in_array($nuevoEstado, ['Completada', 'En_Revision'])) {
+            $ot->fecha_fin_real = now();
             if (isset($validated['duracion_real_horas'])) {
-                $updateData['duracion_real_horas'] = $validated['duracion_real_horas'];
+                $ot->duracion_real_horas = $validated['duracion_real_horas'];
             }
         }
 
         if (!empty($validated['diagnostico'])) {
             $diag = $ot->diagnosticos ?? [];
             $diag[] = $validated['diagnostico'];
-            $updateData['diagnosticos'] = $diag;
+            $ot->diagnosticos = $diag;
         }
 
         if (!empty($validated['solucion'])) {
             $sol = $ot->soluciones ?? [];
             $sol[] = $validated['solucion'];
-            $updateData['soluciones'] = $sol;
+            $ot->soluciones = $sol;
         }
 
-        $ot->update($updateData);
+        if (isset($validated['observaciones_tecnico'])) {
+            $ot->observaciones_tecnico = $validated['observaciones_tecnico'];
+        }
+
+        $ot->save();
+        $ot->registrarCambioEstado($nuevoEstado, $validated['observaciones_tecnico'] ?? null, auth()->id());
 
         return redirect()->route('ordenes.show', $ot->id)
-            ->with('success', "Estado de la OT {$ot->codigo_ot} actualizado a " . str_replace('_', ' ', $validated['estado']));
+            ->with('success', "Estado de la OT {$ot->codigo_ot} actualizado a " . str_replace('_', ' ', $nuevoEstado));
     }
 
     public function addSparePart(Request $request, $id)
@@ -224,10 +230,8 @@ class WorkOrderController extends Controller
             ]);
         }
 
-        // Descontar stock del almacén
         $repuesto->decrement('stock_actual', $validated['cantidad']);
 
-        // Recalcular costo total de repuestos en la OT
         $costoTotalRepuestos = $ot->spareParts()->sum('total');
         $ot->update([
             'costo_repuestos' => $costoTotalRepuestos,

@@ -8,9 +8,13 @@ use App\Models\WorkOrder;
 use App\Models\SparePart;
 use App\Models\WorkOrderSparePart;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class ApiWorkOrderController extends Controller
 {
+    /**
+     * Listado general paginado de OTs
+     */
     public function index(Request $request)
     {
         $user = $request->user();
@@ -39,6 +43,43 @@ class ApiWorkOrderController extends Controller
         ]);
     }
 
+    /**
+     * Sincronización Delta / Tiempo Real para la App Móvil Flutter
+     * GET /api/v1/ordenes-trabajo/sync?since=2026-07-21T22:00:00Z
+     */
+    public function sync(Request $request)
+    {
+        $user = $request->user();
+        $since = $request->input('since');
+
+        $query = WorkOrder::with([
+            'activo', 'solicitante', 'supervisor', 'tecnico', 
+            'spareParts.repuesto', 'laborTimes'
+        ])->where('activo', true);
+
+        if ($user->isTechnician()) {
+            $query->where('tecnico_id', $user->id);
+        } elseif ($user->isRequester()) {
+            $query->where('solicitante_id', $user->id);
+        }
+
+        if ($since) {
+            $query->where('updated_at', '>=', date('Y-m-d H:i:s', strtotime($since)));
+        }
+
+        $modifiedWorkOrders = $query->orderBy('updated_at', 'asc')->get();
+
+        return response()->json([
+            'success' => true,
+            'server_timestamp' => now()->toIso8601String(),
+            'count' => $modifiedWorkOrders->count(),
+            'data' => $modifiedWorkOrders
+        ]);
+    }
+
+    /**
+     * Detalle completo de una OT
+     */
     public function show($id)
     {
         $ot = WorkOrder::with(['activo', 'solicitante', 'tecnico', 'supervisor', 'laborTimes', 'spareParts.repuesto'])->find($id);
@@ -53,6 +94,28 @@ class ApiWorkOrderController extends Controller
         ]);
     }
 
+    /**
+     * Historial de auditoría de cambios de estado de una OT
+     */
+    public function history($id)
+    {
+        $ot = WorkOrder::find($id);
+
+        if (!$ot) {
+            return response()->json(['success' => false, 'message' => 'Orden de trabajo no encontrada.'], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'codigo_ot' => $ot->codigo_ot,
+            'estado_actual' => $ot->estado,
+            'historial' => $ot->historial_estados ?? []
+        ]);
+    }
+
+    /**
+     * Crear solicitud de OT desde Flutter (Soporta foto inicial de fallo)
+     */
     public function store(Request $request)
     {
         $request->validate([
@@ -61,10 +124,23 @@ class ApiWorkOrderController extends Controller
             'activo_id' => 'required|exists:activos,id',
             'tipo_ot' => 'required|in:Correctivo,Preventivo,Predictivo,Urgente,Mejora',
             'prioridad' => 'required|in:Baja,Media,Alta,Crítica',
+            'foto_base64' => 'nullable|string',
+            'foto' => 'nullable|image|max:10240',
         ]);
 
         $count = WorkOrder::count() + 1;
         $codigoOt = 'OT-' . date('Y') . '-' . str_pad($count, 3, '0', STR_PAD_LEFT);
+
+        $fotos = ['antes' => [], 'despues' => []];
+
+        // Procesamiento de foto inicial de fallo si se incluye
+        if ($request->hasFile('foto')) {
+            $path = $request->file('foto')->store('fotos_ot', 'public');
+            $fotos['antes'][] = Storage::url($path);
+        } elseif ($request->filled('foto_base64')) {
+            $path = $this->saveBase64Image($request->input('foto_base64'));
+            if ($path) $fotos['antes'][] = Storage::url($path);
+        }
 
         $ot = WorkOrder::create([
             'codigo_ot' => $codigoOt,
@@ -77,8 +153,12 @@ class ApiWorkOrderController extends Controller
             'creado_por' => $request->user()->id,
             'estado' => 'Pendiente',
             'fecha_solicitud' => now(),
+            'fotos' => $fotos,
             'activo' => true,
         ]);
+
+        // Registrar en el historial de estados
+        $ot->registrarCambioEstado('Pendiente', 'Solicitud registrada desde App móvil', $request->user()->id);
 
         return response()->json([
             'success' => true,
@@ -87,6 +167,9 @@ class ApiWorkOrderController extends Controller
         ], 201);
     }
 
+    /**
+     * Cambio de estado en campo desde la App móvil
+     */
     public function updateStatus(Request $request, $id)
     {
         $request->validate([
@@ -100,24 +183,73 @@ class ApiWorkOrderController extends Controller
             return response()->json(['success' => false, 'message' => 'Orden de trabajo no encontrada.'], 404);
         }
 
-        $updateData = [
-            'estado' => $request->input('estado'),
-            'observaciones_tecnico' => $request->input('observaciones', $ot->observaciones_tecnico),
-        ];
+        $nuevoEstado = $request->input('estado');
+        $observaciones = $request->input('observaciones', '');
 
-        if ($request->input('estado') === 'En_Progreso' && !$ot->fecha_inicio) {
-            $updateData['fecha_inicio'] = now();
+        if ($nuevoEstado === 'En_Progreso' && !$ot->fecha_inicio) {
+            $ot->fecha_inicio = now();
         }
 
-        $ot->update($updateData);
+        $ot->observaciones_tecnico = $observaciones;
+        $ot->save();
+
+        // Audit Trail
+        $ot->registrarCambioEstado($nuevoEstado, $observaciones, $request->user()->id);
 
         return response()->json([
             'success' => true,
-            'message' => "Estado de la OT {$ot->codigo_ot} actualizado a {$ot->estado}.",
+            'message' => "Estado de la OT {$ot->codigo_ot} actualizado a {$nuevoEstado}.",
             'data' => $ot
         ]);
     }
 
+    /**
+     * Subir foto de evidencia desde Flutter (Soporta Multipart File y Base64)
+     */
+    public function uploadPhoto(Request $request, $id)
+    {
+        $request->validate([
+            'tipo_foto' => 'required|in:antes,despues',
+            'foto' => 'nullable|image|max:10240',
+            'foto_base64' => 'nullable|string',
+        ]);
+
+        $ot = WorkOrder::find($id);
+        if (!$ot) return response()->json(['success' => false, 'message' => 'OT no encontrada.'], 404);
+
+        $tipo = $request->input('tipo_foto');
+        $publicUrl = null;
+
+        if ($request->hasFile('foto')) {
+            $path = $request->file('foto')->store('fotos_ot', 'public');
+            $publicUrl = Storage::url($path);
+        } elseif ($request->filled('foto_base64')) {
+            $path = $this->saveBase64Image($request->input('foto_base64'));
+            if ($path) $publicUrl = Storage::url($path);
+        }
+
+        if (!$publicUrl) {
+            return response()->json(['success' => false, 'message' => 'Debe proporcionar una imagen en archivo multipart o string Base64.'], 422);
+        }
+
+        $fotos = $ot->fotos ?? ['antes' => [], 'despues' => []];
+        if (!isset($fotos['antes'])) $fotos['antes'] = [];
+        if (!isset($fotos['despues'])) $fotos['despues'] = [];
+
+        $fotos[$tipo][] = $publicUrl;
+        $ot->update(['fotos' => $fotos]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Fotografía ({$tipo}) adjuntada exitosamente a la OT {$ot->codigo_ot}.",
+            'foto_url' => $publicUrl,
+            'fotos' => $fotos
+        ]);
+    }
+
+    /**
+     * Asignar repuesto utilizado en la OT
+     */
     public function addSparePart(Request $request, $id)
     {
         $request->validate([
@@ -173,36 +305,9 @@ class ApiWorkOrderController extends Controller
         ]);
     }
 
-    public function uploadPhoto(Request $request, $id)
-    {
-        $request->validate([
-            'tipo_foto' => 'required|in:antes,despues',
-            'foto' => 'required|image|max:10240',
-        ]);
-
-        $ot = WorkOrder::find($id);
-        if (!$ot) return response()->json(['success' => false, 'message' => 'OT no encontrada.'], 404);
-
-        $tipo = $request->input('tipo_foto');
-        $path = $request->file('foto')->store('fotos_ot', 'public');
-        $publicUrl = Storage::url($path);
-
-        $fotos = $ot->fotos ?? ['antes' => [], 'despues' => []];
-        if (!isset($fotos['antes'])) $fotos['antes'] = [];
-        if (!isset($fotos['despues'])) $fotos['despues'] = [];
-
-        $fotos[$tipo][] = $publicUrl;
-
-        $ot->update(['fotos' => $fotos]);
-
-        return response()->json([
-            'success' => true,
-            'message' => "Fotografía ({$tipo}) adjuntada exitosamente a la OT {$ot->codigo_ot}.",
-            'foto_url' => $publicUrl,
-            'fotos' => $fotos
-        ]);
-    }
-
+    /**
+     * Completar OT y registrar informe final
+     */
     public function complete(Request $request, $id)
     {
         $request->validate([
@@ -225,7 +330,6 @@ class ApiWorkOrderController extends Controller
         $sol[] = $request->input('solucion');
 
         $ot->update([
-            'estado' => 'Completada',
             'fecha_fin_real' => now(),
             'duracion_real_horas' => $request->input('duracion_real_horas'),
             'diagnosticos' => $diag,
@@ -233,10 +337,41 @@ class ApiWorkOrderController extends Controller
             'observaciones_cierre' => $request->input('observaciones_cierre'),
         ]);
 
+        // Audit Trail
+        $ot->registrarCambioEstado('Completada', 'OT completada desde Flutter. Diagnóstico: ' . $request->input('diagnostico'), $request->user()->id);
+
         return response()->json([
             'success' => true,
             'message' => "Orden de trabajo {$ot->codigo_ot} completada y registrada desde Flutter.",
             'data' => $ot
         ]);
+    }
+
+    /**
+     * Helper privado para guardar imágenes codificadas en Base64
+     */
+    private function saveBase64Image(string $base64String): ?string
+    {
+        try {
+            if (preg_match('/^data:image\/(\w+);base64,/', $base64String, $type)) {
+                $base64String = substr($base64String, strpos($base64String, ',') + 1);
+                $type = strtolower($type[1]);
+            } else {
+                $type = 'png';
+            }
+
+            $imageData = base64_decode($base64String);
+
+            if ($imageData === false) {
+                return null;
+            }
+
+            $fileName = 'fotos_ot/mobile_' . Str::random(20) . '.' . $type;
+            Storage::disk('public')->put($fileName, $imageData);
+
+            return $fileName;
+        } catch (\Exception $e) {
+            return null;
+        }
     }
 }

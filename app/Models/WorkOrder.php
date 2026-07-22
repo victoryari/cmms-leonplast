@@ -111,6 +111,29 @@ class WorkOrder extends Model
     }
 
     /**
+     * Registrar cambio de estado en el historial de auditoría
+     */
+    public function registrarCambioEstado(string $nuevoEstado, ?string $observacion = null, ?int $usuarioId = null): void
+    {
+        $historial = $this->historial_estados ?? [];
+        $usuario = $usuarioId ? User::find($usuarioId) : auth()->user();
+
+        $historial[] = [
+            'estado_anterior' => $this->estado,
+            'nuevo_estado' => $nuevoEstado,
+            'usuario_id' => $usuario?->id,
+            'usuario_nombre' => $usuario?->nombre_completo ?? 'Sistema',
+            'fecha' => now()->toIso8601String(),
+            'observacion' => $observacion,
+        ];
+
+        $this->update([
+            'estado' => $nuevoEstado,
+            'historial_estados' => $historial,
+        ]);
+    }
+
+    /**
      * Helper para color de badge según el estado
      */
     public function getEstadoColorAttribute(): string
