@@ -28,6 +28,7 @@ class User extends Authenticatable
         'especialidad',
         'fecha_ingreso',
         'activo',
+        'fcm_token',
         'email_verificado',
         'ultimo_acceso',
         'foto_perfil',
@@ -129,5 +130,10 @@ class User extends Authenticatable
     public function ordenesAsignadas(): HasMany
     {
         return $this->hasMany(WorkOrder::class, 'tecnico_id');
+    }
+
+    public function notificaciones(): HasMany
+    {
+        return $this->hasMany(Notification::class, 'usuario_id');
     }
 }

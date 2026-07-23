@@ -8,6 +8,7 @@ use App\Models\Asset;
 use App\Models\User;
 use App\Models\SparePart;
 use App\Models\WorkOrderSparePart;
+use App\Services\NotificationService;
 use Illuminate\Support\Facades\Storage;
 
 class WorkOrderController extends Controller
@@ -62,17 +63,22 @@ class WorkOrderController extends Controller
             'completadas' => (clone $metricsQuery)->where('estado', 'Completada')->count(),
         ];
 
-        $tecnicos = User::whereHas('role', function ($q) {
-            $q->where('nombre', 'Tecnico');
-        })->where('activo', true)->get();
-
-        return view('ordenes.index', compact('ordenes', 'metrics', 'tecnicos'));
+        return view('ordenes.index', compact('ordenes', 'metrics'));
     }
 
-    public function create()
+    public function create(Request $request)
     {
         $activos = Asset::where('activo', true)->orderBy('codigo_activo', 'asc')->get();
-        return view('ordenes.create', compact('activos'));
+        $activoSeleccionadoId = $request->input('activo_id');
+
+        if ($codigo = $request->input('codigo_activo')) {
+            $found = Asset::where('codigo_activo', $codigo)->first();
+            if ($found) {
+                $activoSeleccionadoId = $found->id;
+            }
+        }
+
+        return view('ordenes.create', compact('activos', 'activoSeleccionadoId'));
     }
 
     public function store(Request $request)
@@ -98,16 +104,15 @@ class WorkOrderController extends Controller
         $ot->registrarCambioEstado('Pendiente', 'Solicitud registrada desde Panel Web', auth()->id());
 
         return redirect()->route('ordenes.show', $ot->id)
-            ->with('success', "Solicitud de Orden de Trabajo {$ot->codigo_ot} registrada correctamente.");
+            ->with('success', "Orden de trabajo {$ot->codigo_ot} registrada correctamente.");
     }
 
     public function show($id)
     {
-        $user = auth()->user();
         $ot = WorkOrder::with([
             'activo', 'solicitante', 'tecnico', 'supervisor', 
-            'laborTimes.tecnico', 'spareParts.repuesto'
-        ])->findOrFail($id);
+            'laborTimes.usuario', 'spareParts.repuesto'
+        ])->where('activo', true)->findOrFail($id);
 
         $tecnicos = User::whereHas('role', function ($q) {
             $q->where('nombre', 'Tecnico');
@@ -115,7 +120,7 @@ class WorkOrderController extends Controller
 
         $repuestosAlmacen = SparePart::where('activo', true)->where('stock_actual', '>', 0)->get();
 
-        return view('ordenes.show', compact('ot', 'tecnicos', 'repuestosAlmacen', 'user'));
+        return view('ordenes.show', compact('ot', 'tecnicos', 'repuestosAlmacen'));
     }
 
     public function assign(Request $request, $id)
@@ -140,8 +145,11 @@ class WorkOrderController extends Controller
 
         $ot->registrarCambioEstado('Aprobada', "Asignado a técnico: {$tecnico->nombre_completo}", auth()->id());
 
+        // Notificar al técnico asignado en su celular (Push & Notificación interna)
+        app(NotificationService::class)->notifyTechnicianAssigned($ot);
+
         return redirect()->route('ordenes.show', $ot->id)
-            ->with('success', "Técnico asignado y OT {$ot->codigo_ot} aprobada para ejecución.");
+            ->with('success', "Técnico asignado y notificación Push enviada al smartphone de {$tecnico->nombre_completo}.");
     }
 
     public function updateStatus(Request $request, $id)
@@ -149,47 +157,29 @@ class WorkOrderController extends Controller
         $ot = WorkOrder::findOrFail($id);
 
         $validated = $request->validate([
-            'estado' => 'required|in:En_Progreso,En_Pausa,En_Revision,Completada,Cancelada',
-            'diagnostico' => 'nullable|string',
-            'solucion' => 'nullable|string',
-            'duracion_real_horas' => 'nullable|numeric|min:0',
-            'observaciones_tecnico' => 'nullable|string',
+            'nuevo_estado' => 'required|in:Pendiente,Aprobada,En_Progreso,En_Pausa,En_Revision,Completada,Cancelada',
+            'observacion' => 'nullable|string|max:500',
         ]);
 
-        $nuevoEstado = $validated['estado'];
+        $estadoAnterior = $ot->estado;
+        $nuevoEstado = $validated['nuevo_estado'];
 
         if ($nuevoEstado === 'En_Progreso' && !$ot->fecha_inicio) {
             $ot->fecha_inicio = now();
         }
 
-        if (in_array($nuevoEstado, ['Completada', 'En_Revision'])) {
+        if ($nuevoEstado === 'Completada') {
             $ot->fecha_fin_real = now();
-            if (isset($validated['duracion_real_horas'])) {
-                $ot->duracion_real_horas = $validated['duracion_real_horas'];
+            if ($ot->fecha_inicio) {
+                $ot->duracion_real_horas = round(now()->diffInMinutes($ot->fecha_inicio) / 60, 2);
             }
         }
 
-        if (!empty($validated['diagnostico'])) {
-            $diag = $ot->diagnosticos ?? [];
-            $diag[] = $validated['diagnostico'];
-            $ot->diagnosticos = $diag;
-        }
-
-        if (!empty($validated['solucion'])) {
-            $sol = $ot->soluciones ?? [];
-            $sol[] = $validated['solucion'];
-            $ot->soluciones = $sol;
-        }
-
-        if (isset($validated['observaciones_tecnico'])) {
-            $ot->observaciones_tecnico = $validated['observaciones_tecnico'];
-        }
-
         $ot->save();
-        $ot->registrarCambioEstado($nuevoEstado, $validated['observaciones_tecnico'] ?? null, auth()->id());
+        $ot->registrarCambioEstado($nuevoEstado, $validated['observacion'] ?? "Cambio manual a {$nuevoEstado}", auth()->id());
 
         return redirect()->route('ordenes.show', $ot->id)
-            ->with('success', "Estado de la OT {$ot->codigo_ot} actualizado a " . str_replace('_', ' ', $nuevoEstado));
+            ->with('success', "Estado actualizado de {$estadoAnterior} a {$nuevoEstado}.");
     }
 
     public function addSparePart(Request $request, $id)
@@ -199,47 +189,41 @@ class WorkOrderController extends Controller
         $validated = $request->validate([
             'repuesto_id' => 'required|exists:repuestos,id',
             'cantidad' => 'required|integer|min:1',
-            'motivo_uso' => 'nullable|string',
+            'observaciones' => 'nullable|string|max:255',
         ]);
 
         $repuesto = SparePart::findOrFail($validated['repuesto_id']);
 
         if ($repuesto->stock_actual < $validated['cantidad']) {
-            return back()->with('error', "Stock insuficiente de {$repuesto->nombre}. Disponible: {$repuesto->stock_actual}");
+            return back()->with('error', "Stock insuficiente para {$repuesto->nombre}. Stock disponible: {$repuesto->stock_actual}.");
         }
 
-        $existingItem = WorkOrderSparePart::where('orden_trabajo_id', $ot->id)
-            ->where('repuesto_id', $repuesto->id)
-            ->first();
+        $costoUnitario = $repuesto->costo_unitario;
+        $costoTotal = $costoUnitario * $validated['cantidad'];
 
-        if ($existingItem) {
-            $newCantidad = $existingItem->cantidad + $validated['cantidad'];
-            $existingItem->update([
-                'cantidad' => $newCantidad,
-                'total' => $newCantidad * $repuesto->costo_unitario,
-                'motivo_uso' => $validated['motivo_uso'] ?? $existingItem->motivo_uso,
-            ]);
-        } else {
-            WorkOrderSparePart::create([
-                'orden_trabajo_id' => $ot->id,
-                'repuesto_id' => $repuesto->id,
-                'cantidad' => $validated['cantidad'],
-                'costo_unitario' => $repuesto->costo_unitario,
-                'total' => $validated['cantidad'] * $repuesto->costo_unitario,
-                'motivo_uso' => $validated['motivo_uso'],
-            ]);
-        }
-
-        $repuesto->decrement('stock_actual', $validated['cantidad']);
-
-        $costoTotalRepuestos = $ot->spareParts()->sum('total');
-        $ot->update([
-            'costo_repuestos' => $costoTotalRepuestos,
-            'costo_real' => $costoTotalRepuestos + ($ot->costo_mano_obra ?? 0),
+        WorkOrderSparePart::create([
+            'orden_trabajo_id' => $ot->id,
+            'repuesto_id' => $repuesto->id,
+            'cantidad_usada' => $validated['cantidad'],
+            'costo_unitario' => $costoUnitario,
+            'costo_total' => $costoTotal,
+            'observaciones' => $validated['observaciones'],
         ]);
 
+        $repuesto->registrarMovimiento(
+            'Salida',
+            $validated['cantidad'],
+            auth()->id(),
+            "Consumo en OT {$ot->codigo_ot}",
+            $ot->id
+        );
+
+        $ot->costo_repuestos = WorkOrderSparePart::where('orden_trabajo_id', $ot->id)->sum('costo_total');
+        $ot->costo_real = $ot->costo_repuestos + ($ot->costo_mano_obra ?? 0);
+        $ot->save();
+
         return redirect()->route('ordenes.show', $ot->id)
-            ->with('success', "Repuesto {$repuesto->nombre} asignado a la OT {$ot->codigo_ot} ({$validated['cantidad']} unidades).");
+            ->with('success', "Repuesto {$repuesto->nombre} registrado en la OT y stock actualizado en almacén.");
     }
 
     public function uploadPhoto(Request $request, $id)
@@ -247,24 +231,25 @@ class WorkOrderController extends Controller
         $ot = WorkOrder::findOrFail($id);
 
         $request->validate([
-            'tipo_foto' => 'required|in:antes,despues',
             'foto' => 'required|image|max:10240',
+            'tipo_foto' => 'required|in:Antes,Durante,Despues',
+            'descripcion' => 'nullable|string|max:255',
         ]);
 
-        $tipo = $request->input('tipo_foto');
-        $path = $request->file('foto')->store('fotos_ot', 'public');
-        $publicUrl = Storage::url($path);
+        $path = $request->file('foto')->store('fotos_ots', 'public');
+        $fotosArray = $ot->fotos ?? [];
+        $fotosArray[] = [
+            'url_foto' => "/storage/" . $path,
+            'tipo' => $request->input('tipo_foto'),
+            'subido_por' => auth()->user()->nombre_completo,
+            'descripcion' => $request->input('descripcion') ?? '',
+            'fecha' => now()->toIso8601String(),
+        ];
 
-        $fotos = $ot->fotos ?? ['antes' => [], 'despues' => []];
-        if (!isset($fotos['antes'])) $fotos['antes'] = [];
-        if (!isset($fotos['despues'])) $fotos['despues'] = [];
-
-        $fotos[$tipo][] = $publicUrl;
-
-        $ot->update(['fotos' => $fotos]);
+        $ot->update(['fotos' => $fotosArray]);
 
         return redirect()->route('ordenes.show', $ot->id)
-            ->with('success', "Fotografía ({$tipo}) registrada correctamente en la OT.");
+            ->with('success', 'Foto adjuntada correctamente a la Orden de Trabajo.');
     }
 
     public function rate(Request $request, $id)
@@ -273,15 +258,12 @@ class WorkOrderController extends Controller
 
         $validated = $request->validate([
             'calificacion_usuario' => 'required|integer|min:1|max:5',
-            'comentario_usuario' => 'nullable|string',
+            'comentario_usuario' => 'nullable|string|max:500',
         ]);
 
-        $ot->update([
-            'calificacion_usuario' => $validated['calificacion_usuario'],
-            'comentario_usuario' => $validated['comentario_usuario'],
-        ]);
+        $ot->update($validated);
 
         return redirect()->route('ordenes.show', $ot->id)
-            ->with('success', "¡Gracias por calificar el servicio de mantenimiento de la OT {$ot->codigo_ot}!");
+            ->with('success', '¡Gracias! Tu calificación de la atención técnica ha sido registrada.');
     }
 }

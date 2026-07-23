@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Asset;
 use App\Models\WorkOrder;
 use App\Models\User;
+use App\Services\NotificationService;
 use Illuminate\Support\Str;
 
 class PublicRequestController extends Controller
@@ -80,6 +81,9 @@ class PublicRequestController extends Controller
             ];
             $orden->update(['fotos' => $fotosArray]);
         }
+
+        // Notificar inmediatamente a los supervisores sobre la avería reportada
+        app(NotificationService::class)->notifySupervisorBreakdown($orden);
 
         return redirect()->route('public.track', $orden->codigo_ot)
             ->with('success', '¡Tu reporte de avería ha sido recibido por el equipo de mantenimiento!');

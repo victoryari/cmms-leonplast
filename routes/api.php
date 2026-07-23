@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\ApiSparePartController;
 use App\Http\Controllers\Api\ApiReportController;
 use App\Http\Controllers\Api\ApiUserController;
 use App\Http\Controllers\Api\ApiConfigController;
+use App\Http\Controllers\Api\ApiNotificationController;
 
 Route::prefix('v1')->group(function () {
     // Autenticación API (App móvil Flutter)
@@ -54,6 +55,11 @@ Route::prefix('v1')->group(function () {
 
         // Endpoints de Configuración & Catálogos para Flutter
         Route::get('/config/catalogos', [ApiConfigController::class, 'catalogs']);
+
+        // Endpoints de Notificaciones Push & Avisos para Flutter
+        Route::get('/notificaciones', [ApiNotificationController::class, 'index']);
+        Route::post('/notificaciones/{id}/marcar-leida', [ApiNotificationController::class, 'markAsRead']);
+        Route::post('/usuarios/fcm-token', [ApiNotificationController::class, 'updateFcmToken']);
 
         // Endpoints de Gestión de Usuarios para Flutter
         Route::get('/usuarios', [ApiUserController::class, 'index']);

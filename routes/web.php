@@ -12,6 +12,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicRequestController;
 use App\Http\Controllers\SystemSettingController;
+use App\Http\Controllers\NotificationController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -33,9 +34,13 @@ Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // Auto-gestión de Perfil
+    // Auto-gestión de Perfil & Notificaciones
     Route::get('/perfil', [ProfileController::class, 'index'])->name('perfil.index');
     Route::post('/perfil', [ProfileController::class, 'update'])->name('perfil.update');
+
+    Route::get('/notificaciones', [NotificationController::class, 'index'])->name('notificaciones.index');
+    Route::get('/notificaciones/{id}/marcar-leida', [NotificationController::class, 'markAsRead'])->name('notificaciones.marcar-leida');
+    Route::post('/notificaciones/marcar-todas', [NotificationController::class, 'markAllAsRead'])->name('notificaciones.marcar-todas');
 
     // Módulo de Gestión de Activos Industriales
     Route::middleware('role:Administrador,Gerente_Mantenimiento,Supervisor,Tecnico')->group(function () {
