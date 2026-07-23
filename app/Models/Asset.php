@@ -90,11 +90,12 @@ class Asset extends Model
     }
 
     /**
-     * Generar URL para la imagen del código QR
+     * Generar URL para la imagen del código QR codificando el enlace web directo a la Solicitud Rápida
      */
     public function getQrImageUrlAttribute(): string
     {
-        $content = urlencode($this->qr_code_content ?? $this->codigo_activo);
-        return "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data={$content}";
+        $targetUrl = route('public.create', $this->codigo_activo);
+        $encodedUrl = urlencode($targetUrl);
+        return "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={$encodedUrl}";
     }
 }
