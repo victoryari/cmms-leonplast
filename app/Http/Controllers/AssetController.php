@@ -104,7 +104,6 @@ class AssetController extends Controller
         $activo = Asset::with([
             'ordenesTrabajo' => fn($q) => $q->orderBy('created_at', 'desc')->take(10),
             'planesPreventivos',
-            'lecturasMedidores' => fn($q) => $q->orderBy('created_at', 'desc')->take(10),
         ])->findOrFail($id);
 
         return view('activos.show', compact('activo'));

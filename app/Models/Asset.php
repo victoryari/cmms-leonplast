@@ -64,6 +64,11 @@ class Asset extends Model
         return $this->hasMany(WorkOrder::class, 'activo_id');
     }
 
+    public function planesPreventivos(): HasMany
+    {
+        return $this->hasMany(PreventivePlan::class, 'activo_id');
+    }
+
     public function preventivePlans(): HasMany
     {
         return $this->hasMany(PreventivePlan::class, 'activo_id');
