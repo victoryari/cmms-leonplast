@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\ApiPreventivePlanController;
 use App\Http\Controllers\Api\ApiSparePartController;
 use App\Http\Controllers\Api\ApiReportController;
 use App\Http\Controllers\Api\ApiUserController;
+use App\Http\Controllers\Api\ApiConfigController;
 
 Route::prefix('v1')->group(function () {
     // Autenticación API (App móvil Flutter)
@@ -50,6 +51,9 @@ Route::prefix('v1')->group(function () {
         Route::get('/reportes/kpis', [ApiReportController::class, 'kpis']);
         Route::get('/reportes/pareto', [ApiReportController::class, 'pareto']);
         Route::get('/reportes/activos', [ApiReportController::class, 'assets']);
+
+        // Endpoints de Configuración & Catálogos para Flutter
+        Route::get('/config/catalogos', [ApiConfigController::class, 'catalogs']);
 
         // Endpoints de Gestión de Usuarios para Flutter
         Route::get('/usuarios', [ApiUserController::class, 'index']);

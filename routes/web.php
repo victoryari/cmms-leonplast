@@ -11,6 +11,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicRequestController;
+use App\Http\Controllers\SystemSettingController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -86,6 +87,13 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:Administrador,Gerente_Mantenimiento,Supervisor')->group(function () {
         Route::get('/reportes-kpi', [ReportController::class, 'index'])->name('reportes.index');
         Route::get('/reportes-kpi/exportar-csv', [ReportController::class, 'exportCsv'])->name('reportes.export-csv');
+    });
+
+    // Módulo de Configuración & Catálogos Dinámicos (Solo Administrador y Gerente)
+    Route::middleware('role:Administrador,Gerente_Mantenimiento')->group(function () {
+        Route::get('/configuracion', [SystemSettingController::class, 'index'])->name('configuracion.index');
+        Route::post('/configuracion/catalogo', [SystemSettingController::class, 'updateCatalog'])->name('configuracion.update-catalog');
+        Route::post('/configuracion/empresa', [SystemSettingController::class, 'updateCompany'])->name('configuracion.update-company');
     });
 
     // Módulo de Gestión de Usuarios & Personal de Planta (Solo Administrador)
