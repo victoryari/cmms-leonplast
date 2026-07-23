@@ -62,6 +62,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/ordenes-trabajo/{id}', [WorkOrderController::class, 'show'])->name('ordenes.show');
         Route::post('/ordenes-trabajo/{id}/asignar', [WorkOrderController::class, 'assign'])->name('ordenes.assign');
         Route::post('/ordenes-trabajo/{id}/estado', [WorkOrderController::class, 'updateStatus'])->name('ordenes.update-status');
+        Route::post('/ordenes-trabajo/{id}/pausar', [WorkOrderController::class, 'pause'])->name('ordenes.pause');
+        Route::post('/ordenes-trabajo/{id}/reanudar', [WorkOrderController::class, 'resume'])->name('ordenes.resume');
         Route::post('/ordenes-trabajo/{id}/repuestos', [WorkOrderController::class, 'addSparePart'])->name('ordenes.add-spare-part');
         Route::post('/ordenes-trabajo/{id}/fotos', [WorkOrderController::class, 'uploadPhoto'])->name('ordenes.upload-photo');
         Route::post('/ordenes-trabajo/{id}/calificar', [WorkOrderController::class, 'rate'])->name('ordenes.rate');

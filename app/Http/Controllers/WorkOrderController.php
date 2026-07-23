@@ -8,8 +8,8 @@ use App\Models\Asset;
 use App\Models\User;
 use App\Models\SparePart;
 use App\Models\WorkOrderSparePart;
+use App\Models\LaborTime;
 use App\Services\NotificationService;
-use Illuminate\Support\Facades\Storage;
 
 class WorkOrderController extends Controller
 {
@@ -60,6 +60,7 @@ class WorkOrderController extends Controller
             'pendientes' => (clone $metricsQuery)->where('estado', 'Pendiente')->count(),
             'aprobadas' => (clone $metricsQuery)->where('estado', 'Aprobada')->count(),
             'en_progreso' => (clone $metricsQuery)->where('estado', 'En_Progreso')->count(),
+            'en_pausa' => (clone $metricsQuery)->where('estado', 'En_Pausa')->count(),
             'completadas' => (clone $metricsQuery)->where('estado', 'Completada')->count(),
         ];
 
@@ -145,7 +146,6 @@ class WorkOrderController extends Controller
 
         $ot->registrarCambioEstado('Aprobada', "Asignado a técnico: {$tecnico->nombre_completo}", auth()->id());
 
-        // Notificar al técnico asignado en su celular (Push & Notificación interna)
         app(NotificationService::class)->notifyTechnicianAssigned($ot);
 
         return redirect()->route('ordenes.show', $ot->id)
@@ -164,15 +164,42 @@ class WorkOrderController extends Controller
         $estadoAnterior = $ot->estado;
         $nuevoEstado = $validated['nuevo_estado'];
 
-        if ($nuevoEstado === 'En_Progreso' && !$ot->fecha_inicio) {
-            $ot->fecha_inicio = now();
+        if ($nuevoEstado === 'En_Progreso') {
+            if (!$ot->fecha_inicio) {
+                $ot->fecha_inicio = now();
+            }
+
+            // Abrir tramo activo si no existe uno en progreso
+            $existingActive = LaborTime::where('orden_trabajo_id', $ot->id)->where('estado', 'En_Progreso')->first();
+            if (!$existingActive) {
+                LaborTime::create([
+                    'orden_trabajo_id' => $ot->id,
+                    'tecnico_id' => auth()->id() ?? $ot->tecnico_id ?? 1,
+                    'fecha_inicio' => now(),
+                    'estado' => 'En_Progreso',
+                    'observaciones' => 'Inicio de atención técnica en campo',
+                ]);
+            }
         }
 
         if ($nuevoEstado === 'Completada') {
             $ot->fecha_fin_real = now();
-            if ($ot->fecha_inicio) {
-                $ot->duracion_real_horas = round(now()->diffInMinutes($ot->fecha_inicio) / 60, 2);
+            
+            $activeLabor = LaborTime::where('orden_trabajo_id', $ot->id)->where('estado', 'En_Progreso')->first();
+            if ($activeLabor) {
+                $duracionMinutos = now()->diffInMinutes($activeLabor->fecha_inicio);
+                $horas = max(round($duracionMinutos / 60, 2), 0.1);
+                $activeLabor->update([
+                    'fecha_fin' => now(),
+                    'horas_trabajadas' => $horas,
+                    'estado' => 'Completado',
+                ]);
             }
+
+            $totalHoras = LaborTime::where('orden_trabajo_id', $ot->id)->sum('horas_trabajadas');
+            $ot->duracion_real_horas = max($totalHoras, 0.5);
+            $ot->costo_mano_obra = $ot->duracion_real_horas * 25.00;
+            $ot->costo_real = ($ot->costo_repuestos ?? 0) + $ot->costo_mano_obra;
         }
 
         $ot->save();
@@ -180,6 +207,74 @@ class WorkOrderController extends Controller
 
         return redirect()->route('ordenes.show', $ot->id)
             ->with('success', "Estado actualizado de {$estadoAnterior} a {$nuevoEstado}.");
+    }
+
+    public function pause(Request $request, $id)
+    {
+        $ot = WorkOrder::findOrFail($id);
+
+        $validated = $request->validate([
+            'motivo_pausa' => 'required|in:Falta_Repuesto,Fin_Jornada,Operativa_Planta,Permiso_Seguridad,Otro',
+            'observaciones' => 'nullable|string|max:500',
+        ]);
+
+        $motivoTexto = str_replace('_', ' ', $validated['motivo_pausa']);
+        $nota = "Pausado por [{$motivoTexto}]: " . ($validated['observaciones'] ?? 'Sin detalle adicional');
+
+        $activeLabor = LaborTime::where('orden_trabajo_id', $ot->id)->where('estado', 'En_Progreso')->first();
+        if ($activeLabor) {
+            $duracionMinutos = now()->diffInMinutes($activeLabor->fecha_inicio);
+            $horas = max(round($duracionMinutos / 60, 2), 0.1);
+            $activeLabor->update([
+                'fecha_pausa' => now(),
+                'fecha_fin' => now(),
+                'horas_trabajadas' => $horas,
+                'estado' => 'En_Pausa',
+                'observaciones' => $nota,
+            ]);
+        } else {
+            LaborTime::create([
+                'orden_trabajo_id' => $ot->id,
+                'tecnico_id' => auth()->id() ?? $ot->tecnico_id ?? 1,
+                'fecha_inicio' => $ot->fecha_inicio ?? now(),
+                'fecha_pausa' => now(),
+                'fecha_fin' => now(),
+                'horas_trabajadas' => 0.5,
+                'estado' => 'En_Pausa',
+                'observaciones' => $nota,
+            ]);
+        }
+
+        $totalHoras = LaborTime::where('orden_trabajo_id', $ot->id)->sum('horas_trabajadas');
+        $ot->duracion_real_horas = $totalHoras;
+        $ot->costo_mano_obra = $totalHoras * 25.00;
+        $ot->costo_real = ($ot->costo_repuestos ?? 0) + $ot->costo_mano_obra;
+
+        $ot->update(['estado' => 'En_Pausa']);
+        $ot->registrarCambioEstado('En_Pausa', $nota, auth()->id());
+
+        return redirect()->route('ordenes.show', $ot->id)
+            ->with('success', "OT {$ot->codigo_ot} pausada correctamente por {$motivoTexto}. Horas registradas hasta el momento: {$ot->duracion_real_horas} hrs.");
+    }
+
+    public function resume(Request $request, $id)
+    {
+        $ot = WorkOrder::findOrFail($id);
+
+        LaborTime::create([
+            'orden_trabajo_id' => $ot->id,
+            'tecnico_id' => auth()->id() ?? $ot->tecnico_id ?? 1,
+            'fecha_inicio' => now(),
+            'fecha_reanudacion' => now(),
+            'estado' => 'En_Progreso',
+            'observaciones' => 'Trabajo reanudado en campo',
+        ]);
+
+        $ot->update(['estado' => 'En_Progreso']);
+        $ot->registrarCambioEstado('En_Progreso', 'Reanudación de labores técnicas en campo', auth()->id());
+
+        return redirect()->route('ordenes.show', $ot->id)
+            ->with('success', "Trabajo reanudado en la OT {$ot->codigo_ot}. Conteo de tiempo reactivado.");
     }
 
     public function addSparePart(Request $request, $id)

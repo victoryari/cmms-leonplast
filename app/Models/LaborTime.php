@@ -34,6 +34,11 @@ class LaborTime extends Model
         return $this->belongsTo(WorkOrder::class, 'orden_trabajo_id');
     }
 
+    public function usuario(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'tecnico_id');
+    }
+
     public function tecnico(): BelongsTo
     {
         return $this->belongsTo(User::class, 'tecnico_id');

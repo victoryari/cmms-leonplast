@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\WorkOrder;
 use App\Models\SparePart;
 use App\Models\WorkOrderSparePart;
+use App\Models\LaborTime;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -45,7 +46,6 @@ class ApiWorkOrderController extends Controller
 
     /**
      * Sincronización Delta / Tiempo Real para la App Móvil Flutter
-     * GET /api/v1/ordenes-trabajo/sync?since=2026-07-21T22:00:00Z
      */
     public function sync(Request $request)
     {
@@ -114,7 +114,7 @@ class ApiWorkOrderController extends Controller
     }
 
     /**
-     * Crear solicitud de OT desde Flutter (Soporta foto inicial de fallo)
+     * Crear solicitud de OT desde Flutter
      */
     public function store(Request $request)
     {
@@ -133,7 +133,6 @@ class ApiWorkOrderController extends Controller
 
         $fotos = ['antes' => [], 'despues' => []];
 
-        // Procesamiento de foto inicial de fallo si se incluye
         if ($request->hasFile('foto')) {
             $path = $request->file('foto')->store('fotos_ot', 'public');
             $fotos['antes'][] = Storage::url($path);
@@ -157,7 +156,6 @@ class ApiWorkOrderController extends Controller
             'activo' => true,
         ]);
 
-        // Registrar en el historial de estados
         $ot->registrarCambioEstado('Pendiente', 'Solicitud registrada desde App móvil', $request->user()->id);
 
         return response()->json([
@@ -193,7 +191,6 @@ class ApiWorkOrderController extends Controller
         $ot->observaciones_tecnico = $observaciones;
         $ot->save();
 
-        // Audit Trail
         $ot->registrarCambioEstado($nuevoEstado, $observaciones, $request->user()->id);
 
         return response()->json([
@@ -204,7 +201,79 @@ class ApiWorkOrderController extends Controller
     }
 
     /**
-     * Subir foto de evidencia desde Flutter (Soporta Multipart File y Base64)
+     * Pausar la ejecución de una OT desde Flutter
+     */
+    public function pause(Request $request, $id)
+    {
+        $request->validate([
+            'motivo_pausa' => 'required|in:Falta_Repuesto,Fin_Jornada,Operativa_Planta,Permiso_Seguridad,Otro',
+            'observaciones' => 'nullable|string',
+        ]);
+
+        $ot = WorkOrder::find($id);
+        if (!$ot) return response()->json(['success' => false, 'message' => 'OT no encontrada.'], 404);
+
+        $motivoTexto = str_replace('_', ' ', $request->input('motivo_pausa'));
+        $nota = "Pausado por [{$motivoTexto}]: " . ($request->input('observaciones') ?? 'Sin detalle');
+
+        $activeLabor = LaborTime::where('orden_trabajo_id', $ot->id)->where('estado', 'En_Progreso')->first();
+        if ($activeLabor) {
+            $duracionMinutos = now()->diffInMinutes($activeLabor->fecha_inicio);
+            $horas = max(round($duracionMinutos / 60, 2), 0.1);
+            $activeLabor->update([
+                'fecha_pausa' => now(),
+                'fecha_fin' => now(),
+                'horas_trabajadas' => $horas,
+                'estado' => 'En_Pausa',
+                'observaciones' => $nota,
+            ]);
+        }
+
+        $totalHoras = LaborTime::where('orden_trabajo_id', $ot->id)->sum('horas_trabajadas');
+        $ot->duracion_real_horas = $totalHoras;
+        $ot->costo_mano_obra = $totalHoras * 25.00;
+        $ot->costo_real = ($ot->costo_repuestos ?? 0) + $ot->costo_mano_obra;
+
+        $ot->update(['estado' => 'En_Pausa']);
+        $ot->registrarCambioEstado('En_Pausa', $nota, $request->user()->id);
+
+        return response()->json([
+            'success' => true,
+            'message' => "OT {$ot->codigo_ot} pausada correctamente por {$motivoTexto}.",
+            'duracion_real_horas' => $ot->duracion_real_horas,
+            'data' => $ot
+        ]);
+    }
+
+    /**
+     * Reanudar la ejecución de una OT desde Flutter
+     */
+    public function resume(Request $request, $id)
+    {
+        $ot = WorkOrder::find($id);
+        if (!$ot) return response()->json(['success' => false, 'message' => 'OT no encontrada.'], 404);
+
+        LaborTime::create([
+            'orden_trabajo_id' => $ot->id,
+            'tecnico_id' => $request->user()->id,
+            'fecha_inicio' => now(),
+            'fecha_reanudacion' => now(),
+            'estado' => 'En_Progreso',
+            'observaciones' => 'Trabajo reanudado desde Flutter App',
+        ]);
+
+        $ot->update(['estado' => 'En_Progreso']);
+        $ot->registrarCambioEstado('En_Progreso', 'Reanudación de labores técnicas desde Flutter App', $request->user()->id);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Trabajo reanudado en la OT {$ot->codigo_ot}.",
+            'data' => $ot
+        ]);
+    }
+
+    /**
+     * Subir foto de evidencia desde Flutter
      */
     public function uploadPhoto(Request $request, $id)
     {
@@ -337,7 +406,6 @@ class ApiWorkOrderController extends Controller
             'observaciones_cierre' => $request->input('observaciones_cierre'),
         ]);
 
-        // Audit Trail
         $ot->registrarCambioEstado('Completada', 'OT completada desde Flutter. Diagnóstico: ' . $request->input('diagnostico'), $request->user()->id);
 
         return response()->json([

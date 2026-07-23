@@ -3,7 +3,7 @@
 @section('title', "Orden de Trabajo: {$ot->codigo_ot}")
 
 @section('content')
-<div class="space-y-6" x-data="{ addSpareModal: false, uploadPhotoModal: false, photoType: 'antes' }">
+<div class="space-y-6" x-data="{ addSpareModal: false, uploadPhotoModal: false, pauseModal: false, photoType: 'antes' }">
 
     <!-- Top Navigation & Status Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -19,6 +19,7 @@
                     <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full border
                         @if($ot->estado == 'Completada') bg-emerald-500/10 text-emerald-400 border-emerald-500/30
                         @elseif($ot->estado == 'En_Progreso') bg-indigo-500/10 text-indigo-400 border-indigo-500/30
+                        @elseif($ot->estado == 'En_Pausa') bg-amber-500/10 text-amber-400 border-amber-500/30
                         @elseif($ot->estado == 'Aprobada') bg-blue-500/10 text-blue-400 border-blue-500/30
                         @elseif($ot->estado == 'Pendiente') bg-amber-500/10 text-amber-400 border-amber-500/30
                         @else bg-slate-500/10 text-slate-400 border-slate-500/30 @endif">
@@ -30,6 +31,22 @@
         </div>
 
         <div class="flex items-center space-x-2">
+            <!-- Botones de Acción de Pausa / Reanudación para el Técnico -->
+            @if(auth()->user()->isTechnician() || auth()->user()->hasRole(['Administrador', 'Supervisor', 'Gerente_Mantenimiento']))
+                @if($ot->estado == 'En_Progreso')
+                <button @click="pauseModal = true" class="px-4 py-2 rounded-xl bg-amber-600/20 hover:bg-amber-600 text-amber-300 hover:text-white border border-amber-500/30 text-xs font-bold transition flex items-center space-x-1.5">
+                    <span>⏸️ Pausar Trabajo</span>
+                </button>
+                @elseif($ot->estado == 'En_Pausa')
+                <form action="{{ route('ordenes.resume', $ot->id) }}" method="POST">
+                    @csrf
+                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs shadow-lg shadow-emerald-600/30 transition flex items-center space-x-1.5">
+                        <span>▶️ Reanudar Trabajo</span>
+                    </button>
+                </form>
+                @endif
+            @endif
+
             <span class="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs font-semibold text-slate-300">
                 Prioridad: <strong class="text-amber-400">{{ $ot->prioridad }}</strong>
             </span>
@@ -40,18 +57,18 @@
     <div class="p-6 rounded-3xl bg-slate-900 border border-slate-800">
         <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Progreso de la Orden de Trabajo</h4>
         <div class="grid grid-cols-4 gap-2 text-center text-xs">
-            <div class="p-3 rounded-2xl border transition {{ in_array($ot->estado, ['Pendiente', 'Aprobada', 'En_Progreso', 'En_Revision', 'Completada']) ? 'bg-blue-600/20 border-blue-500/40 text-blue-300' : 'bg-slate-950 border-slate-800 text-slate-500' }}">
+            <div class="p-3 rounded-2xl border transition {{ in_array($ot->estado, ['Pendiente', 'Aprobada', 'En_Progreso', 'En_Pausa', 'En_Revision', 'Completada']) ? 'bg-blue-600/20 border-blue-500/40 text-blue-300' : 'bg-slate-950 border-slate-800 text-slate-500' }}">
                 <span class="block font-bold">1. Solicitada</span>
                 <span class="text-[10px] opacity-75">{{ $ot->fecha_solicitud?->format('d/m/Y H:i') }}</span>
             </div>
 
-            <div class="p-3 rounded-2xl border transition {{ in_array($ot->estado, ['Aprobada', 'En_Progreso', 'En_Revision', 'Completada']) ? 'bg-indigo-600/20 border-indigo-500/40 text-indigo-300' : 'bg-slate-950 border-slate-800 text-slate-500' }}">
+            <div class="p-3 rounded-2xl border transition {{ in_array($ot->estado, ['Aprobada', 'En_Progreso', 'En_Pausa', 'En_Revision', 'Completada']) ? 'bg-indigo-600/20 border-indigo-500/40 text-indigo-300' : 'bg-slate-950 border-slate-800 text-slate-500' }}">
                 <span class="block font-bold">2. Aprobada / Asignada</span>
                 <span class="text-[10px] opacity-75">{{ $ot->fecha_aprobacion ? $ot->fecha_aprobacion->format('d/m/Y H:i') : 'Pendiente' }}</span>
             </div>
 
-            <div class="p-3 rounded-2xl border transition {{ in_array($ot->estado, ['En_Progreso', 'En_Revision', 'Completada']) ? 'bg-amber-600/20 border-amber-500/40 text-amber-300' : 'bg-slate-950 border-slate-800 text-slate-500' }}">
-                <span class="block font-bold">3. En Ejecución</span>
+            <div class="p-3 rounded-2xl border transition {{ in_array($ot->estado, ['En_Progreso', 'En_Pausa', 'En_Revision', 'Completada']) ? ($ot->estado == 'En_Pausa' ? 'bg-amber-600/20 border-amber-500/40 text-amber-300' : 'bg-indigo-600/20 border-indigo-500/40 text-indigo-300') : 'bg-slate-950 border-slate-800 text-slate-500' }}">
+                <span class="block font-bold">{{ $ot->estado == 'En_Pausa' ? '⏸️ En Pausa' : '3. En Ejecución' }}</span>
                 <span class="text-[10px] opacity-75">{{ $ot->fecha_inicio ? $ot->fecha_inicio->format('d/m/Y H:i') : 'Por iniciar' }}</span>
             </div>
 
@@ -115,18 +132,15 @@
                     <div class="p-4 rounded-2xl bg-slate-950/60 border border-rose-500/20 space-y-3">
                         <div class="flex items-center justify-between">
                             <span class="text-xs font-bold text-rose-400 uppercase">🔴 Fotos ANTES de la Reparación</span>
-                            <span class="text-[10px] text-slate-500 font-mono">{{ count($ot->fotos['antes'] ?? []) }} fotos</span>
                         </div>
 
                         <div class="grid grid-cols-2 gap-2">
-                            @forelse($ot->fotos['antes'] ?? [] as $imgUrl)
-                            <a href="{{ $imgUrl }}" target="_blank" class="group relative rounded-xl overflow-hidden border border-slate-800 bg-slate-900 block aspect-square">
-                                <img src="{{ $imgUrl }}" alt="Foto antes" class="w-full h-full object-cover group-hover:scale-105 transition">
+                            @forelse(is_array($ot->fotos) ? ($ot->fotos['antes'] ?? []) : [] as $fotoUrl)
+                            <a href="{{ $fotoUrl }}" target="_blank" class="block aspect-square rounded-xl overflow-hidden border border-slate-800 hover:border-blue-500 transition">
+                                <img src="{{ $fotoUrl }}" class="w-full h-full object-cover">
                             </a>
                             @empty
-                            <div class="col-span-2 py-6 text-center text-slate-600 text-xs italic">
-                                Sin fotos del estado inicial de la avería.
-                            </div>
+                            <p class="text-[11px] text-slate-500 italic col-span-2 py-4 text-center">Sin fotos registradas del estado inicial.</p>
                             @endforelse
                         </div>
                     </div>
@@ -135,204 +149,148 @@
                     <div class="p-4 rounded-2xl bg-slate-950/60 border border-emerald-500/20 space-y-3">
                         <div class="flex items-center justify-between">
                             <span class="text-xs font-bold text-emerald-400 uppercase">🟢 Fotos DESPUÉS de la Reparación</span>
-                            <span class="text-[10px] text-slate-500 font-mono">{{ count($ot->fotos['despues'] ?? []) }} fotos</span>
                         </div>
 
                         <div class="grid grid-cols-2 gap-2">
-                            @forelse($ot->fotos['despues'] ?? [] as $imgUrl)
-                            <a href="{{ $imgUrl }}" target="_blank" class="group relative rounded-xl overflow-hidden border border-slate-800 bg-slate-900 block aspect-square">
-                                <img src="{{ $imgUrl }}" alt="Foto después" class="w-full h-full object-cover group-hover:scale-105 transition">
+                            @forelse(is_array($ot->fotos) ? ($ot->fotos['despues'] ?? []) : [] as $fotoUrl)
+                            <a href="{{ $fotoUrl }}" target="_blank" class="block aspect-square rounded-xl overflow-hidden border border-slate-800 hover:border-emerald-500 transition">
+                                <img src="{{ $fotoUrl }}" class="w-full h-full object-cover">
                             </a>
                             @empty
-                            <div class="col-span-2 py-6 text-center text-slate-600 text-xs italic">
-                                Sin fotos del resultado final de la reparación.
-                            </div>
+                            <p class="text-[11px] text-slate-500 italic col-span-2 py-4 text-center">Sin fotos registradas del trabajo finalizado.</p>
                             @endforelse
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- REPUESTOS UTILIZADOS EN LA OT -->
+            <!-- REPUESTOS Y MATERIALES UTILIZADOS -->
             <div class="p-6 rounded-3xl bg-slate-900 border border-slate-800 space-y-4">
                 <div class="flex items-center justify-between">
                     <h3 class="text-sm font-bold text-white uppercase tracking-wider text-amber-400 flex items-center gap-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
-                        <span>Repuestos e Insumos de Almacén Utilizados</span>
+                        <span>Repuestos y Materiales Consumidos</span>
                     </h3>
 
                     @if(auth()->user()->isTechnician() || auth()->user()->hasRole(['Administrador', 'Supervisor', 'Gerente_Mantenimiento']))
-                    <button @click="addSpareModal = true" class="px-3 py-1.5 rounded-xl bg-amber-600/20 text-amber-300 hover:bg-amber-600 hover:text-white border border-amber-500/30 text-xs font-semibold transition">
+                    <button @click="addSpareModal = true" class="px-3 py-1.5 rounded-xl bg-amber-500/20 text-amber-300 hover:bg-amber-500 hover:text-slate-950 border border-amber-500/30 text-xs font-semibold transition">
                         + Asignar Repuesto
                     </button>
                     @endif
                 </div>
 
-                <div class="overflow-x-auto rounded-2xl border border-slate-800">
-                    <table class="w-full text-left text-xs border-collapse">
-                        <thead class="bg-slate-950 text-slate-400 font-semibold uppercase">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-slate-300">
+                        <thead class="bg-slate-950 text-slate-500 uppercase text-[10px] border-b border-slate-800">
                             <tr>
-                                <th class="p-3">SKU / Repuesto</th>
-                                <th class="p-3 text-center">Cantidad</th>
-                                <th class="p-3 text-right">Costo Unit.</th>
-                                <th class="p-3 text-right">Subtotal</th>
+                                <th class="py-2.5 px-3">Código SKU / Repuesto</th>
+                                <th class="py-2.5 px-3 text-center">Cantidad</th>
+                                <th class="py-2.5 px-3 text-right">Costo Unit.</th>
+                                <th class="py-2.5 px-3 text-right">Subtotal</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-slate-800/60">
+                        <tbody class="divide-y divide-slate-800/50">
                             @forelse($ot->spareParts as $sp)
-                            <tr class="hover:bg-slate-800/40">
-                                <td class="p-3">
-                                    <span class="font-mono text-amber-400 font-bold block text-[11px]">{{ $sp->repuesto?->codigo_sku }}</span>
-                                    <span class="text-white font-medium">{{ $sp->repuesto?->nombre }}</span>
-                                    @if($sp->motivo_uso)<p class="text-[10px] text-slate-500 italic">{{ $sp->motivo_uso }}</p>@endif
+                            <tr>
+                                <td class="py-2.5 px-3">
+                                    <span class="font-mono text-[10px] text-blue-400 font-bold block">{{ $sp->repuesto?->codigo_sku }}</span>
+                                    <span class="font-semibold text-white">{{ $sp->repuesto?->nombre }}</span>
                                 </td>
-                                <td class="p-3 text-center font-bold text-white">{{ $sp->cantidad }} un.</td>
-                                <td class="p-3 text-right font-mono text-slate-300">${{ number_format($sp->costo_unitario, 2) }}</td>
-                                <td class="p-3 text-right font-mono font-bold text-amber-400">${{ number_format($sp->total, 2) }}</td>
+                                <td class="py-2.5 px-3 text-center font-bold text-amber-400 font-mono">{{ $sp->cantidad_usada }}</td>
+                                <td class="py-2.5 px-3 text-right font-mono text-slate-400">${{ number_format($sp->costo_unitario, 2) }}</td>
+                                <td class="py-2.5 px-3 text-right font-mono font-bold text-emerald-400">${{ number_format($sp->costo_total, 2) }}</td>
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="4" class="p-6 text-center text-slate-500 italic">No se han registrado repuestos utilizados para esta intervención.</td>
+                                <td colspan="4" class="py-6 text-center text-slate-500 italic">No se han registrado repuestos descontados de almacén para esta OT.</td>
                             </tr>
                             @endforelse
                         </tbody>
-                        <tfoot class="bg-slate-950 font-bold">
-                            <tr>
-                                <td colspan="3" class="p-3 text-right text-slate-400 uppercase text-[10px]">Costo Total Repuestos:</td>
-                                <td class="p-3 text-right font-mono text-amber-400 text-sm">${{ number_format($ot->costo_repuestos ?? 0, 2) }}</td>
-                            </tr>
-                        </tfoot>
                     </table>
                 </div>
             </div>
 
-            <!-- Technician Action Form (When assigned & in execution) -->
-            @if(auth()->user()->isTechnician() || auth()->user()->hasRole(['Administrador', 'Supervisor', 'Gerente_Mantenimiento']))
-            <div class="p-6 rounded-3xl bg-slate-900 border border-indigo-500/30 space-y-4">
-                <h3 class="text-sm font-bold text-white uppercase tracking-wider text-indigo-400 flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-                    <span>Registro Técnico de Intervención (Técnico)</span>
-                </h3>
-
-                <form method="POST" action="{{ route('ordenes.update-status', $ot->id) }}" class="space-y-4">
-                    @csrf
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-300 mb-1">Cambiar Estado Operativo *</label>
-                            <select name="estado" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white">
-                                <option value="En_Progreso" {{ $ot->estado == 'En_Progreso' ? 'selected' : '' }}>En Progreso (Iniciado)</option>
-                                <option value="En_Pausa" {{ $ot->estado == 'En_Pausa' ? 'selected' : '' }}>En Pausa (Esperando Repuesto)</option>
-                                <option value="En_Revision" {{ $ot->estado == 'En_Revision' ? 'selected' : '' }}>En Revisión / Pruebas</option>
-                                <option value="Completada" {{ $ot->estado == 'Completada' ? 'selected' : '' }}>Completada (Finalizada)</option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-300 mb-1">Horas Reales de Trabajo</label>
-                            <input type="number" step="0.1" name="duracion_real_horas" value="{{ old('duracion_real_horas', $ot->duracion_real_horas ?? 2.5) }}" placeholder="Ej: 3.5"
-                                   class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white">
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-300 mb-1">Diagnóstico Encontrado</label>
-                        <input type="text" name="diagnostico" placeholder="Ej: Fisura en sellos tóricos de la bomba hidráulica..."
-                               class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white">
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-300 mb-1">Solución Aplicada</label>
-                        <input type="text" name="solucion" placeholder="Ej: Reemplazo de kit de empaquetadura V-ring y prueba de presión..."
-                               class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white">
-                    </div>
-
-                    <div class="flex justify-end">
-                        <button type="submit" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg shadow-indigo-600/30 transition">
-                            Actualizar Avance de OT
-                        </button>
-                    </div>
-                </form>
-            </div>
-            @endif
-
-            <!-- Diagnósticos y Soluciones Registradas -->
-            @if(!empty($ot->diagnosticos) || !empty($ot->soluciones))
+            <!-- AUDITORÍA DE TRAMOS DE MANO DE OBRA Y TIEMPOS -->
             <div class="p-6 rounded-3xl bg-slate-900 border border-slate-800 space-y-4">
-                <h3 class="text-sm font-bold text-white uppercase tracking-wider text-emerald-400">Diagnóstico e Historial de Soluciones</h3>
-
-                @if(!empty($ot->diagnosticos))
-                <div>
-                    <span class="text-[10px] font-semibold text-slate-500 uppercase block mb-1">Diagnósticos:</span>
-                    <ul class="list-disc list-inside text-xs text-slate-300 space-y-1 bg-slate-950 p-3 rounded-xl border border-slate-800">
-                        @foreach($ot->diagnosticos as $diag)
-                        <li>{{ $diag }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-                @endif
-
-                @if(!empty($ot->soluciones))
-                <div>
-                    <span class="text-[10px] font-semibold text-slate-500 uppercase block mb-1">Soluciones Aplicadas:</span>
-                    <ul class="list-disc list-inside text-xs text-emerald-300 space-y-1 bg-slate-950 p-3 rounded-xl border border-slate-800">
-                        @foreach($ot->soluciones as $sol)
-                        <li>{{ $sol }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-                @endif
-            </div>
-            @endif
-
-            <!-- Satisfaction Rating (For Requester when Completed) -->
-            @if($ot->estado == 'Completada')
-            <div class="p-6 rounded-3xl bg-slate-900 border border-amber-500/30 space-y-4">
-                <h3 class="text-sm font-bold text-white uppercase tracking-wider text-amber-400 flex items-center gap-2">
-                    <span>Evaluación de Calidad del Servicio de Mantenimiento</span>
+                <h3 class="text-sm font-bold text-white uppercase tracking-wider text-indigo-400 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span>Registro de Tramos de Trabajo & Pausas</span>
                 </h3>
 
-                @if($ot->calificacion_usuario)
-                <div class="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs space-y-1">
-                    <div class="flex items-center space-x-1 text-amber-400 text-lg">
-                        @for($i=1; $i<=5; $i++)
-                        <span>{{ $i <= $ot->calificacion_usuario ? '★' : '☆' }}</span>
-                        @endfor
-                        <span class="text-xs font-bold text-white ml-2">({{ $ot->calificacion_usuario }}/5 Estrellas)</span>
-                    </div>
-                    @if($ot->comentario_usuario)
-                    <p class="text-slate-300 italic pt-1">"{{ $ot->comentario_usuario }}"</p>
-                    @endif
-                </div>
-                @elseif(auth()->user()->id == $ot->solicitante_id || auth()->user()->isAdmin())
-                <form method="POST" action="{{ route('ordenes.rate', $ot->id) }}" class="space-y-3" x-data="{ stars: 5 }">
-                    @csrf
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-300 mb-1">Califica el trabajo del técnico (1 a 5 Estrellas):</label>
-                        <div class="flex items-center space-x-2 text-2xl cursor-pointer text-amber-400">
-                            <template x-for="i in 5">
-                                <span @click="stars = i" x-text="i <= stars ? '★' : '☆'"></span>
-                            </template>
-                            <input type="hidden" name="calificacion_usuario" :value="stars">
+                <div class="space-y-2">
+                    @forelse($ot->laborTimes as $labor)
+                    <div class="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between text-xs">
+                        <div>
+                            <span class="font-bold text-white block">{{ $labor->usuario?->nombre_completo ?? 'Técnico de Planta' }}</span>
+                            <span class="text-[11px] text-slate-400">
+                                ⏱️ {{ $labor->fecha_inicio?->format('d/m/Y H:i') }}
+                                @if($labor->fecha_fin)
+                                 ➜ {{ $labor->fecha_fin->format('H:i') }}
+                                @else
+                                 (En ejecución...)
+                                @endif
+                            </span>
+                            @if($labor->observaciones)
+                            <p class="text-[10px] text-amber-300/80 italic mt-0.5">{{ $labor->observaciones }}</p>
+                            @endif
+                        </div>
+
+                        <div class="text-right">
+                            <span class="px-2.5 py-0.5 rounded text-[10px] font-bold border block
+                                @if($labor->estado == 'En_Progreso') bg-indigo-500/10 text-indigo-400 border-indigo-500/30
+                                @elseif($labor->estado == 'En_Pausa') bg-amber-500/10 text-amber-400 border-amber-500/30
+                                @else bg-emerald-500/10 text-emerald-400 border-emerald-500/30 @endif">
+                                {{ str_replace('_', ' ', $labor->estado) }}
+                            </span>
+                            <span class="font-mono text-xs font-extrabold text-white mt-1 block">
+                                {{ number_format($labor->horas_trabajadas ?? 0, 2) }} hrs
+                            </span>
                         </div>
                     </div>
-
-                    <div>
-                        <textarea name="comentario_usuario" rows="2" placeholder="Comentario adicional sobre el servicio..."
-                                  class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-blue-500"></textarea>
-                    </div>
-
-                    <button type="submit" class="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-lg transition">
-                        Enviar Calificación
-                    </button>
-                </form>
-                @endif
+                    @empty
+                    <p class="text-xs text-slate-500 italic text-center py-4">No hay tramos de mano de obra registrados aún.</p>
+                    @endforelse
+                </div>
             </div>
-            @endif
 
         </div>
 
-        <!-- Right Col: Personnel & Safety Checklist -->
+        <!-- Right Col: Personnel & Actions Sidebar -->
         <div class="space-y-6">
+
+            <!-- Technical Assignment Form for Supervisor -->
+            @if(!$ot->tecnico_id && auth()->user()->hasRole(['Administrador', 'Supervisor', 'Gerente_Mantenimiento']))
+            <div class="p-6 rounded-3xl bg-slate-900 border border-slate-800 space-y-4">
+                <h4 class="font-bold text-white uppercase text-xs text-amber-400">Asignar Técnico a esta OT</h4>
+
+                <form action="{{ route('ordenes.assign', $ot->id) }}" method="POST" class="space-y-3">
+                    @csrf
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Seleccionar Técnico *</label>
+                        <select name="tecnico_id" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white">
+                            <option value="">Seleccione Técnico</option>
+                            @foreach($tecnicos as $tec)
+                            <option value="{{ $tec->id }}">{{ $tec->nombre_completo }} ({{ $tec->especialidad ?? 'General' }})</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Prioridad Ajustada</label>
+                        <select name="prioridad" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white">
+                            <option value="Media" {{ $ot->prioridad == 'Media' ? 'selected' : '' }}>Media</option>
+                            <option value="Alta" {{ $ot->prioridad == 'Alta' ? 'selected' : '' }}>Alta</option>
+                            <option value="Crítica" {{ $ot->prioridad == 'Crítica' ? 'selected' : '' }}>🚨 Crítica</option>
+                            <option value="Baja" {{ $ot->prioridad == 'Baja' ? 'selected' : '' }}>Baja</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-extrabold text-xs shadow-lg">
+                        ✓ Aprobar y Asignar Técnico
+                    </button>
+                </form>
+            </div>
+            @endif
 
             <!-- Personnel Card -->
             <div class="p-6 rounded-3xl bg-slate-900 border border-slate-800 space-y-4 text-xs">
@@ -359,6 +317,10 @@
                 <!-- Cost Summary -->
                 <div class="pt-3 border-t border-slate-800 space-y-1.5">
                     <div class="flex justify-between text-slate-400">
+                        <span>Horas Trabajadas:</span>
+                        <span class="font-mono text-white">{{ number_format($ot->duracion_real_horas ?? 0, 2) }} hrs</span>
+                    </div>
+                    <div class="flex justify-between text-slate-400">
                         <span>Mano de Obra:</span>
                         <span class="font-mono text-white">${{ number_format($ot->costo_mano_obra ?? 0, 2) }}</span>
                     </div>
@@ -375,6 +337,45 @@
 
         </div>
 
+    </div>
+
+    <!-- MODAL PARA PAUSAR TRABAJO -->
+    <div x-show="pauseModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm" x-cloak>
+        <div class="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 class="text-sm font-bold text-amber-400 uppercase tracking-wider flex items-center gap-2">
+                    <span>⏸️ Pausar Ejecución de OT</span>
+                </h3>
+                <button @click="pauseModal = false" class="text-slate-400 hover:text-white">✕</button>
+            </div>
+
+            <form action="{{ route('ordenes.pause', $ot->id) }}" method="POST" class="space-y-4">
+                @csrf
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Motivo Principal de la Pausa *</label>
+                    <select name="motivo_pausa" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white">
+                        <option value="Falta_Repuesto" selected>📦 Falta de Repuestos en Almacén</option>
+                        <option value="Fin_Jornada">⏰ Fin de Jornada / Cambio de Turno</option>
+                        <option value="Operativa_Planta">🏭 Requerimiento de Lote de Producción</option>
+                        <option value="Permiso_Seguridad">🛡️ Permiso de Trabajo Seguro / Enfriamiento</option>
+                        <option value="Otro">💬 Otro Motivo Justificado</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Detalles / Observaciones de la Pausa</label>
+                    <textarea name="observaciones" rows="3" placeholder="Ej: Esperando empaque de nitrilo 2'' solicitado a proveedor..." 
+                              class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white placeholder-slate-500"></textarea>
+                </div>
+
+                <div class="flex items-center justify-end space-x-2 pt-2">
+                    <button type="button" @click="pauseModal = false" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">Cancelar</button>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs shadow-lg shadow-amber-600/30">
+                        ⏸️ Confirmar Pausa
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <!-- MODAL: ASIGNAR REPUESTO DE ALMACÉN -->

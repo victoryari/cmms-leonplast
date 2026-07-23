@@ -33,6 +33,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/ordenes-trabajo/{id}/historial', [ApiWorkOrderController::class, 'history']);
         Route::post('/ordenes-trabajo/solicitar', [ApiWorkOrderController::class, 'store']);
         Route::post('/ordenes-trabajo/{id}/cambiar-estado', [ApiWorkOrderController::class, 'updateStatus']);
+        Route::post('/ordenes-trabajo/{id}/pausar', [ApiWorkOrderController::class, 'pause']);
+        Route::post('/ordenes-trabajo/{id}/reanudar', [ApiWorkOrderController::class, 'resume']);
         Route::post('/ordenes-trabajo/{id}/repuestos', [ApiWorkOrderController::class, 'addSparePart']);
         Route::post('/ordenes-trabajo/{id}/fotos', [ApiWorkOrderController::class, 'uploadPhoto']);
         Route::post('/ordenes-trabajo/{id}/completar', [ApiWorkOrderController::class, 'complete']);
