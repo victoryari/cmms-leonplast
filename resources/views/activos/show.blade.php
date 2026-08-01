@@ -70,42 +70,69 @@
                 </div>
             </div>
 
-            <!-- Datos Generales Card -->
+            <!-- Datos Generales Card con Imagen del Activo -->
             <div class="p-6 rounded-3xl bg-slate-900 border border-slate-800 space-y-4">
-                <h3 class="text-sm font-bold text-white uppercase tracking-wider text-blue-400 flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                    <span>Datos Generales del Equipo</span>
-                </h3>
+                <div class="flex items-center justify-between">
+                    <h3 class="text-sm font-bold text-white uppercase tracking-wider text-blue-400 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        <span>Datos Generales del Equipo</span>
+                    </h3>
 
-                <p class="text-xs text-slate-300 leading-relaxed">{{ $activo->descripcion }}</p>
+                    @if(!$activo->imagen_principal_url && auth()->user()->hasRole(['Administrador', 'Gerente_Mantenimiento']))
+                    <a href="{{ route('activos.edit', $activo->id) }}" class="text-[11px] font-semibold text-cyan-400 hover:text-cyan-300 flex items-center gap-1">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        <span>+ Agregar Foto del Activo</span>
+                    </a>
+                    @endif
+                </div>
 
-                <div class="grid grid-cols-2 md:grid-cols-3 gap-4 pt-2 text-xs">
-                    <div>
-                        <span class="text-slate-500 block font-semibold text-[10px] uppercase">Categoría</span>
-                        <span class="text-white font-medium">{{ $activo->categoria }}</span>
+                <div class="grid grid-cols-1 {{ $activo->imagen_principal_url ? 'md:grid-cols-3' : '' }} gap-6 items-start">
+                    @if($activo->imagen_principal_url)
+                    <div class="md:col-span-1">
+                        <div class="relative group rounded-2xl overflow-hidden border border-slate-800 bg-slate-950 shadow-lg">
+                            <img src="{{ $activo->imagen_principal_url }}" alt="{{ $activo->nombre }}" class="w-full h-48 object-cover rounded-2xl transition transform duration-300 group-hover:scale-105">
+                            <div class="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                                <a href="{{ $activo->imagen_principal_url }}" target="_blank" class="px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-700 text-white text-[11px] font-bold shadow-xl flex items-center gap-1.5">
+                                    <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path></svg>
+                                    <span>Ampliar Imagen</span>
+                                </a>
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <span class="text-slate-500 block font-semibold text-[10px] uppercase">Marca</span>
-                        <span class="text-white font-medium">{{ $activo->marca ?? 'N/A' }}</span>
-                    </div>
-                    <div>
-                        <span class="text-slate-500 block font-semibold text-[10px] uppercase">Modelo</span>
-                        <span class="text-white font-medium">{{ $activo->modelo ?? 'N/A' }}</span>
-                    </div>
-                    <div>
-                        <span class="text-slate-500 block font-semibold text-[10px] uppercase">Número de Serie</span>
-                        <span class="text-mono text-slate-300 font-medium">{{ $activo->numero_serie ?? 'N/A' }}</span>
-                    </div>
-                    <div>
-                        <span class="text-slate-500 block font-semibold text-[10px] uppercase">Ubicación en Planta</span>
-                        <span class="text-white font-medium">{{ $activo->ubicacion ?? 'Nave Principal' }}</span>
-                    </div>
-                    <div>
-                        <span class="text-slate-500 block font-semibold text-[10px] uppercase">Área Operativa</span>
-                        <span class="text-white font-medium">{{ $activo->area ?? 'Producción' }}</span>
+                    @endif
+
+                    <div class="{{ $activo->imagen_principal_url ? 'md:col-span-2' : '' }} space-y-4">
+                        <p class="text-xs text-slate-300 leading-relaxed">{{ $activo->descripcion }}</p>
+
+                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-2 text-xs">
+                            <div>
+                                <span class="text-slate-500 block font-semibold text-[10px] uppercase">Categoría</span>
+                                <span class="text-white font-medium">{{ $activo->categoria }}</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-500 block font-semibold text-[10px] uppercase">Marca</span>
+                                <span class="text-white font-medium">{{ $activo->marca ?? 'N/A' }}</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-500 block font-semibold text-[10px] uppercase">Modelo</span>
+                                <span class="text-white font-medium">{{ $activo->modelo ?? 'N/A' }}</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-500 block font-semibold text-[10px] uppercase">Número de Serie</span>
+                                <span class="text-mono text-slate-300 font-medium">{{ $activo->numero_serie ?? 'N/A' }}</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-500 block font-semibold text-[10px] uppercase">Ubicación en Planta</span>
+                                <span class="text-white font-medium">{{ $activo->ubicacion ?? 'Nave Principal' }}</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-500 block font-semibold text-[10px] uppercase">Área Operativa</span>
+                                <span class="text-white font-medium">{{ $activo->area ?? 'Producción' }}</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </div>   </div>
 
             <!-- Especificaciones Técnicas Card -->
             @if(!empty($activo->especificaciones_tecnicas))

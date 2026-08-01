@@ -201,7 +201,7 @@
                     <label class="block text-xs font-semibold text-slate-300 mb-1">Seleccionar Técnico Responsable *</label>
                     <select name="tecnico_id" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white">
                         <option value="">Seleccione Técnico</option>
-                        @foreach($tecnicos as $tec)
+                        @foreach($tecnicos ?? [] as $tec)
                         <option value="{{ $tec->id }}">{{ $tec->nombre_completo }} ({{ $tec->especialidad ?? 'Mantenimiento' }})</option>
                         @endforeach
                     </select>

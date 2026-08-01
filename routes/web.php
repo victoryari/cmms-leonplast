@@ -13,6 +13,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicRequestController;
 use App\Http\Controllers\SystemSettingController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\RoleController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -43,7 +44,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/notificaciones/marcar-todas', [NotificationController::class, 'markAllAsRead'])->name('notificaciones.marcar-todas');
 
     // Módulo de Gestión de Activos Industriales
-    Route::middleware('role:Administrador,Gerente_Mantenimiento,Supervisor,Tecnico')->group(function () {
+    Route::middleware('permission:activos,ver')->group(function () {
         Route::get('/activos', [AssetController::class, 'index'])->name('activos.index');
         Route::get('/activos/crear', [AssetController::class, 'create'])->name('activos.create');
         Route::post('/activos', [AssetController::class, 'store'])->name('activos.store');
@@ -55,7 +56,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // Módulo de Órdenes de Trabajo (OTs)
-    Route::middleware('role:Administrador,Gerente_Mantenimiento,Supervisor,Tecnico,Solicitante')->group(function () {
+    Route::middleware('permission:ordenes,ver')->group(function () {
         Route::get('/ordenes-trabajo', [WorkOrderController::class, 'index'])->name('ordenes.index');
         Route::get('/ordenes-trabajo/crear', [WorkOrderController::class, 'create'])->name('ordenes.create');
         Route::post('/ordenes-trabajo', [WorkOrderController::class, 'store'])->name('ordenes.store');
@@ -70,7 +71,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // Mantenimiento Preventivo & Rutinas Programadas
-    Route::middleware('role:Administrador,Gerente_Mantenimiento,Supervisor,Tecnico')->group(function () {
+    Route::middleware('permission:planes,ver')->group(function () {
         Route::get('/planes-preventivos', [PreventivePlanController::class, 'index'])->name('planes.index');
         Route::get('/planes-preventivos/crear', [PreventivePlanController::class, 'create'])->name('planes.create');
         Route::post('/planes-preventivos', [PreventivePlanController::class, 'store'])->name('planes.store');
@@ -80,7 +81,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // Módulo de Gestión de Inventario de Repuestos & Almacén
-    Route::middleware('role:Administrador,Gerente_Mantenimiento,Supervisor,Tecnico')->group(function () {
+    Route::middleware('permission:repuestos,ver')->group(function () {
         Route::get('/repuestos', [SparePartController::class, 'index'])->name('repuestos.index');
         Route::get('/repuestos/crear', [SparePartController::class, 'create'])->name('repuestos.create');
         Route::post('/repuestos', [SparePartController::class, 'store'])->name('repuestos.store');
@@ -91,7 +92,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // Módulo de Reportes KPI & Analítica de Planta
-    Route::middleware('role:Administrador,Gerente_Mantenimiento,Supervisor')->group(function () {
+    Route::middleware('permission:reportes,ver')->group(function () {
         Route::get('/reportes-kpi', [ReportController::class, 'index'])->name('reportes.index');
         Route::get('/reportes-kpi/exportar-csv', [ReportController::class, 'exportCsv'])->name('reportes.export-csv');
     });
@@ -103,8 +104,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/configuracion/empresa', [SystemSettingController::class, 'updateCompany'])->name('configuracion.update-company');
     });
 
-    // Módulo de Gestión de Usuarios & Personal de Planta (Solo Administrador)
-    Route::middleware('role:Administrador')->group(function () {
+    // Módulo de Gestión de Usuarios & Personal de Planta
+    Route::middleware('permission:usuarios_roles,ver')->group(function () {
         Route::get('/usuarios', [UserController::class, 'index'])->name('usuarios.index');
         Route::get('/usuarios/crear', [UserController::class, 'create'])->name('usuarios.create');
         Route::post('/usuarios', [UserController::class, 'store'])->name('usuarios.store');
@@ -113,5 +114,15 @@ Route::middleware('auth')->group(function () {
         Route::put('/usuarios/{id}', [UserController::class, 'update'])->name('usuarios.update');
         Route::post('/usuarios/{id}/toggle-status', [UserController::class, 'toggleStatus'])->name('usuarios.toggle-status');
         Route::post('/usuarios/{id}/restablecer-clave', [UserController::class, 'resetPassword'])->name('usuarios.reset-password');
+    });
+
+    // Gestión Granular de Roles y Matriz de Permisos
+    Route::middleware('permission:usuarios_roles,gestionar_roles')->group(function () {
+        Route::get('/roles', [RoleController::class, 'index'])->name('roles.index');
+        Route::get('/roles/crear', [RoleController::class, 'create'])->name('roles.create');
+        Route::post('/roles', [RoleController::class, 'store'])->name('roles.store');
+        Route::get('/roles/{id}/editar', [RoleController::class, 'edit'])->name('roles.edit');
+        Route::put('/roles/{id}', [RoleController::class, 'update'])->name('roles.update');
+        Route::delete('/roles/{id}', [RoleController::class, 'destroy'])->name('roles.destroy');
     });
 });

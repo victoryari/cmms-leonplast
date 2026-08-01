@@ -81,7 +81,13 @@ class AssetController extends Controller
             'fecha_adquisicion' => 'nullable|date',
             'vida_util_estimada' => 'nullable|integer|min:1',
             'descripcion' => 'nullable|string',
+            'imagen' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
+
+        if ($request->hasFile('imagen')) {
+            $path = $request->file('imagen')->store('activos', 'public');
+            $validated['imagenes'] = [$path];
+        }
 
         $year = date('Y');
         $lastAsset = Asset::whereYear('created_at', $year)->orderBy('id', 'desc')->first();
@@ -135,7 +141,18 @@ class AssetController extends Controller
             'fecha_adquisicion' => 'nullable|date',
             'vida_util_estimada' => 'nullable|integer|min:1',
             'descripcion' => 'nullable|string',
+            'imagen' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'eliminar_imagen' => 'nullable|boolean',
         ]);
+
+        if ($request->boolean('eliminar_imagen')) {
+            $validated['imagenes'] = null;
+        }
+
+        if ($request->hasFile('imagen')) {
+            $path = $request->file('imagen')->store('activos', 'public');
+            $validated['imagenes'] = [$path];
+        }
 
         $activo->update($validated);
 

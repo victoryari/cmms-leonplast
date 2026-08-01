@@ -60,6 +60,8 @@ class UserController extends Controller
             'codigo_empleado' => 'required|string|max:50|unique:usuarios,codigo_empleado',
             'telefono' => 'nullable|string|max:20',
             'especialidad' => 'nullable|string|max:100',
+            'sueldo_mensual' => 'nullable|numeric|min:0',
+            'costo_hora' => 'nullable|numeric|min:0',
             'fecha_ingreso' => 'nullable|date',
             'password' => 'required|string|min:6|confirmed',
         ]);
@@ -104,6 +106,8 @@ class UserController extends Controller
             'codigo_empleado' => ['required', 'string', 'max:50', Rule::unique('usuarios')->ignore($usuario->id)],
             'telefono' => 'nullable|string|max:20',
             'especialidad' => 'nullable|string|max:100',
+            'sueldo_mensual' => 'nullable|numeric|min:0',
+            'costo_hora' => 'nullable|numeric|min:0',
             'fecha_ingreso' => 'nullable|date',
             'activo' => 'required|boolean',
         ]);

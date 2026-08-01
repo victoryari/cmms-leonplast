@@ -131,14 +131,18 @@
                     <tr class="hover:bg-slate-800/40 transition group">
                         <td class="py-3.5 px-4">
                             <div class="flex items-center space-x-3">
+                                @if($activo->imagen_principal_url)
+                                <img src="{{ $activo->imagen_principal_url }}" alt="{{ $activo->nombre }}" class="w-10 h-10 rounded-xl object-cover border border-slate-700 shrink-0">
+                                @else
                                 <div class="w-9 h-9 rounded-xl bg-blue-600/10 text-blue-400 border border-blue-500/20 flex items-center justify-center font-mono font-bold text-[10px] shrink-0">
                                     {{ substr($activo->codigo_activo, -3) }}
                                 </div>
+                                @endif
                                 <div>
                                     <a href="{{ route('activos.show', $activo->id) }}" class="font-bold text-white group-hover:text-blue-400 transition block text-sm">
                                         {{ $activo->nombre }}
                                     </a>
-                                    <span class="font-mono text-[10px] text-slate-400 block">{{ $activo->codigo_activo }}</span>
+                                    <span class="font-mono text-[11px] text-slate-400">{{ $activo->codigo_activo }}</span>
                                 </div>
                             </div>
                         </td>

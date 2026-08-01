@@ -38,13 +38,16 @@
     <!-- Quick Metrics Cards (6 Modules KPI Grid) -->
     <div class="grid grid-cols-2 lg:grid-cols-6 gap-4">
         <!-- Total Activos -->
+        @if(auth()->user()->hasPermission('activos', 'ver'))
         <a href="{{ route('activos.index') }}" class="p-4 rounded-2xl bg-slate-900 hover:bg-slate-800/80 border border-slate-800 shadow-xl transition space-y-1 block">
             <p class="text-[11px] font-bold text-slate-400 uppercase">Activos</p>
             <h3 class="text-2xl font-extrabold text-white">{{ $metrics['total_activos'] }}</h3>
             <p class="text-[10px] text-emerald-400 font-medium">Equipos de Planta ➔</p>
         </a>
+        @endif
 
         <!-- OTs Pendientes -->
+        @if(auth()->user()->hasPermission('ordenes', 'ver'))
         <a href="{{ route('ordenes.index') }}" class="p-4 rounded-2xl bg-slate-900 hover:bg-slate-800/80 border border-slate-800 shadow-xl transition space-y-1 block">
             <p class="text-[11px] font-bold text-slate-400 uppercase">OTs Pendientes</p>
             <h3 class="text-2xl font-extrabold text-amber-400">{{ $metrics['ots_pendientes'] }}</h3>
@@ -57,23 +60,28 @@
             <h3 class="text-2xl font-extrabold text-indigo-400">{{ $metrics['ots_en_progreso'] }}</h3>
             <p class="text-[10px] text-indigo-300 font-medium">En Intervención ➔</p>
         </a>
+        @endif
 
         <!-- Mantenimiento Preventivo -->
+        @if(auth()->user()->hasPermission('planes', 'ver'))
         <a href="{{ route('planes.index') }}" class="p-4 rounded-2xl bg-slate-900 hover:bg-slate-800/80 border border-slate-800 shadow-xl transition space-y-1 block">
             <p class="text-[11px] font-bold text-slate-400 uppercase">Preventivos</p>
             <h3 class="text-2xl font-extrabold text-blue-400">{{ $metrics['total_planes'] }}</h3>
             <p class="text-[10px] text-blue-300 font-medium">Rutinas Activas ➔</p>
         </a>
+        @endif
 
         <!-- Inventario & Almacén -->
+        @if(auth()->user()->hasPermission('repuestos', 'ver'))
         <a href="{{ route('repuestos.index') }}" class="p-4 rounded-2xl bg-slate-900 hover:bg-slate-800/80 border border-slate-800 shadow-xl transition space-y-1 block">
             <p class="text-[11px] font-bold text-slate-400 uppercase">Almacén</p>
             <h3 class="text-2xl font-extrabold {{ $metrics['alertas_repuestos'] > 0 ? 'text-amber-400' : 'text-white' }}">{{ $metrics['total_repuestos'] }}</h3>
             <p class="text-[10px] text-amber-400 font-medium">{{ $metrics['alertas_repuestos'] }} alertas stock ➔</p>
         </a>
+        @endif
 
         <!-- Analítica KPI -->
-        @if(auth()->user()->hasRole(['Administrador', 'Gerente_Mantenimiento', 'Supervisor']))
+        @if(auth()->user()->hasPermission('reportes', 'ver'))
         <a href="{{ route('reportes.index') }}" class="p-4 rounded-2xl bg-slate-900 hover:bg-slate-800/80 border border-slate-800 shadow-xl transition space-y-1 block">
             <p class="text-[11px] font-bold text-purple-400 uppercase">Reportes KPI</p>
             <h3 class="text-2xl font-extrabold text-purple-400">99.9%</h3>
@@ -88,6 +96,7 @@
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <!-- Módulo 1: Activos -->
+            @if(auth()->user()->hasPermission('activos', 'ver'))
             <a href="{{ route('activos.index') }}" class="p-6 rounded-3xl bg-slate-900 hover:bg-slate-850 border border-slate-800 transition group shadow-xl">
                 <div class="flex items-center space-x-4">
                     <div class="w-12 h-12 rounded-2xl bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center group-hover:scale-110 transition">
@@ -99,8 +108,10 @@
                     </div>
                 </div>
             </a>
+            @endif
 
             <!-- Módulo 2: OTs -->
+            @if(auth()->user()->hasPermission('ordenes', 'ver'))
             <a href="{{ route('ordenes.index') }}" class="p-6 rounded-3xl bg-slate-900 hover:bg-slate-850 border border-slate-800 transition group shadow-xl">
                 <div class="flex items-center space-x-4">
                     <div class="w-12 h-12 rounded-2xl bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center group-hover:scale-110 transition">
@@ -112,8 +123,10 @@
                     </div>
                 </div>
             </a>
+            @endif
 
             <!-- Módulo 3: Preventivo -->
+            @if(auth()->user()->hasPermission('planes', 'ver'))
             <a href="{{ route('planes.index') }}" class="p-6 rounded-3xl bg-slate-900 hover:bg-slate-850 border border-slate-800 transition group shadow-xl">
                 <div class="flex items-center space-x-4">
                     <div class="w-12 h-12 rounded-2xl bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center group-hover:scale-110 transition">
@@ -125,8 +138,10 @@
                     </div>
                 </div>
             </a>
+            @endif
 
             <!-- Módulo 4: Almacén & Repuestos -->
+            @if(auth()->user()->hasPermission('repuestos', 'ver'))
             <a href="{{ route('repuestos.index') }}" class="p-6 rounded-3xl bg-slate-900 hover:bg-slate-850 border border-slate-800 transition group shadow-xl">
                 <div class="flex items-center space-x-4">
                     <div class="w-12 h-12 rounded-2xl bg-amber-600/20 text-amber-400 border border-amber-500/30 flex items-center justify-center group-hover:scale-110 transition">
@@ -138,9 +153,10 @@
                     </div>
                 </div>
             </a>
+            @endif
 
             <!-- Módulo 5: Reportes KPI & Pareto -->
-            @if(auth()->user()->hasRole(['Administrador', 'Gerente_Mantenimiento', 'Supervisor']))
+            @if(auth()->user()->hasPermission('reportes', 'ver'))
             <a href="{{ route('reportes.index') }}" class="p-6 rounded-3xl bg-slate-900 hover:bg-slate-850 border border-slate-800 transition group shadow-xl">
                 <div class="flex items-center space-x-4">
                     <div class="w-12 h-12 rounded-2xl bg-purple-600/20 text-purple-400 border border-purple-500/30 flex items-center justify-center group-hover:scale-110 transition">

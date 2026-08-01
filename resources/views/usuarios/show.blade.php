@@ -63,6 +63,18 @@
                     <strong class="text-blue-400 font-medium block">{{ $usuario->especialidad ?? 'Planta General' }}</strong>
                 </div>
 
+                <div class="p-3 rounded-xl bg-emerald-950/40 border border-emerald-900/50 space-y-1">
+                    <span class="text-[10px] text-emerald-400 uppercase block font-bold">💵 Remuneración & Costo HH:</span>
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="text-slate-400">Sueldo Mensual:</span>
+                        <strong class="text-white font-mono">{{ $usuario->sueldo_mensual ? 'S/ ' . number_format($usuario->sueldo_mensual, 2) : 'Sin registrar' }}</strong>
+                    </div>
+                    <div class="flex items-center justify-between text-xs pt-1 border-t border-emerald-900/30">
+                        <span class="text-slate-400">Tarifa por Hora:</span>
+                        <strong class="text-emerald-400 font-mono font-bold">S/ {{ number_format($usuario->costo_hora_calculado, 2) }} / hr</strong>
+                    </div>
+                </div>
+
                 <div>
                     <span class="text-[10px] text-slate-500 uppercase block font-semibold">Descripción del Rol:</span>
                     <p class="text-slate-300 leading-relaxed text-[11px] bg-slate-950 p-3 rounded-xl border border-slate-800/80 mt-1">

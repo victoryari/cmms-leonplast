@@ -64,7 +64,15 @@ class WorkOrderController extends Controller
             'completadas' => (clone $metricsQuery)->where('estado', 'Completada')->count(),
         ];
 
-        return view('ordenes.index', compact('ordenes', 'metrics'));
+        $tecnicos = User::whereHas('role', function ($q) {
+            $q->where('nombre', 'Tecnico');
+        })->where('activo', true)->get();
+
+        if ($tecnicos->isEmpty()) {
+            $tecnicos = User::where('activo', true)->get();
+        }
+
+        return view('ordenes.index', compact('ordenes', 'metrics', 'tecnicos'));
     }
 
     public function create(Request $request)
@@ -198,7 +206,8 @@ class WorkOrderController extends Controller
 
             $totalHoras = LaborTime::where('orden_trabajo_id', $ot->id)->sum('horas_trabajadas');
             $ot->duracion_real_horas = max($totalHoras, 0.5);
-            $ot->costo_mano_obra = $ot->duracion_real_horas * 25.00;
+            $tarifaTecnico = $ot->tecnico?->costo_hora_calculado ?? 25.00;
+            $ot->costo_mano_obra = $ot->duracion_real_horas * $tarifaTecnico;
             $ot->costo_real = ($ot->costo_repuestos ?? 0) + $ot->costo_mano_obra;
         }
 
@@ -247,7 +256,8 @@ class WorkOrderController extends Controller
 
         $totalHoras = LaborTime::where('orden_trabajo_id', $ot->id)->sum('horas_trabajadas');
         $ot->duracion_real_horas = $totalHoras;
-        $ot->costo_mano_obra = $totalHoras * 25.00;
+        $tarifaTecnico = $ot->tecnico?->costo_hora_calculado ?? 25.00;
+        $ot->costo_mano_obra = $totalHoras * $tarifaTecnico;
         $ot->costo_real = ($ot->costo_repuestos ?? 0) + $ot->costo_mano_obra;
 
         $ot->update(['estado' => 'En_Pausa']);
@@ -327,21 +337,36 @@ class WorkOrderController extends Controller
 
         $request->validate([
             'foto' => 'required|image|max:10240',
-            'tipo_foto' => 'required|in:Antes,Durante,Despues',
+            'tipo_foto' => 'required|string',
             'descripcion' => 'nullable|string|max:255',
         ]);
 
-        $path = $request->file('foto')->store('fotos_ots', 'public');
-        $fotosArray = $ot->fotos ?? [];
-        $fotosArray[] = [
-            'url_foto' => "/storage/" . $path,
-            'tipo' => $request->input('tipo_foto'),
-            'subido_por' => auth()->user()->nombre_completo,
-            'descripcion' => $request->input('descripcion') ?? '',
-            'fecha' => now()->toIso8601String(),
-        ];
+        $tipo = strtolower($request->input('tipo_foto', 'antes'));
+        if (!in_array($tipo, ['antes', 'despues'])) {
+            $tipo = 'antes';
+        }
 
-        $ot->update(['fotos' => $fotosArray]);
+        $path = $request->file('foto')->store('fotos_ots', 'public');
+        $publicUrl = asset('storage/' . $path);
+
+        $fotos = $ot->fotos ?? ['antes' => [], 'despues' => []];
+
+        if (is_array($fotos) && isset($fotos[0]) && is_array($fotos[0])) {
+            $converted = ['antes' => [], 'despues' => []];
+            foreach ($fotos as $item) {
+                $t = strtolower($item['tipo'] ?? 'antes');
+                if (!in_array($t, ['antes', 'despues'])) $t = 'antes';
+                $converted[$t][] = $item['url_foto'] ?? ($item['url'] ?? '');
+            }
+            $fotos = $converted;
+        }
+
+        if (!isset($fotos['antes']) || !is_array($fotos['antes'])) $fotos['antes'] = [];
+        if (!isset($fotos['despues']) || !is_array($fotos['despues'])) $fotos['despues'] = [];
+
+        $fotos[$tipo][] = $publicUrl;
+
+        $ot->update(['fotos' => $fotos]);
 
         return redirect()->route('ordenes.show', $ot->id)
             ->with('success', 'Foto adjuntada correctamente a la Orden de Trabajo.');

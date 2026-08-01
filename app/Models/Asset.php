@@ -44,6 +44,7 @@ class Asset extends Model
     protected $appends = [
         'qr_image_url',
         'estado_operativo_color',
+        'imagen_principal_url',
     ];
 
     protected $casts = [
@@ -102,5 +103,16 @@ class Asset extends Model
         $targetUrl = route('public.create', $this->codigo_activo);
         $encodedUrl = urlencode($targetUrl);
         return "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={$encodedUrl}";
+    }
+
+    /**
+     * URL pública de la imagen principal del activo
+     */
+    public function getImagenPrincipalUrlAttribute(): ?string
+    {
+        if (!empty($this->imagenes) && is_array($this->imagenes) && isset($this->imagenes[0])) {
+            return asset('storage/' . ltrim($this->imagenes[0], '/'));
+        }
+        return null;
     }
 }

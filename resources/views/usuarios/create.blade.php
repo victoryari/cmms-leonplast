@@ -73,6 +73,39 @@
                 </div>
             </div>
 
+            <!-- Costos y Remuneración para Cálculo de Mano de Obra en OTs -->
+            <div class="p-4 rounded-2xl bg-slate-950/80 border border-emerald-900/40 space-y-3">
+                <div class="flex items-center justify-between">
+                    <h4 class="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center space-x-1.5">
+                        <span>💵 Remuneración & Costo Hora Hombre (HH)</span>
+                    </h4>
+                    <span class="text-[10px] text-slate-400">Jornada base: 208 horas/mes (48h semanales)</span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="sueldo_mensual" class="block text-xs font-semibold text-slate-300 mb-1">Sueldo Mensual (S/ o USD)</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-xs text-slate-400 font-bold">$ / S/</span>
+                            <input type="number" step="0.01" min="0" id="sueldo_mensual" name="sueldo_mensual" value="{{ old('sueldo_mensual') }}" placeholder="Ej: 2400.00"
+                                   oninput="calcularCostoHora()"
+                                   class="w-full bg-slate-900 border border-slate-800 rounded-xl pl-16 pr-4 py-2.5 text-xs text-white focus:border-emerald-500">
+                        </div>
+                        <p class="text-[10px] text-slate-400 mt-1">Remuneración mensual asignada al trabajador</p>
+                    </div>
+
+                    <div>
+                        <label for="costo_hora" class="block text-xs font-semibold text-slate-300 mb-1">Costo Hora Hombre (Calculado)</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-xs text-emerald-400 font-bold">/ hora</span>
+                            <input type="number" step="0.01" min="0" id="costo_hora" name="costo_hora" value="{{ old('costo_hora') }}" placeholder="Ej: 11.54"
+                                   class="w-full bg-slate-900 border border-slate-800 rounded-xl pl-16 pr-4 py-2.5 text-xs text-emerald-400 font-bold focus:border-emerald-500">
+                        </div>
+                        <p class="text-[10px] text-slate-400 mt-1">Tarifa aplicada para costear mano de obra en las OTs (Sueldo / 208 hrs)</p>
+                    </div>
+                </div>
+            </div>
+
             <div class="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
                 <h4 class="text-xs font-bold text-blue-400 uppercase">Credenciales de Inicio de Sesión</h4>
 
@@ -101,4 +134,20 @@
     </div>
 
 </div>
+
+<script>
+function calcularCostoHora() {
+    const sueldoInput = document.getElementById('sueldo_mensual');
+    const costoHoraInput = document.getElementById('costo_hora');
+    const val = parseFloat(sueldoInput.value);
+    
+    if (!isNaN(val) && val > 0) {
+        // 208 horas/mes = 48 horas semanales * 4.333 semanas
+        const costoHora = (val / 208).toFixed(2);
+        costoHoraInput.value = costoHora;
+    } else {
+        costoHoraInput.value = '';
+    }
+}
+</script>
 @endsection

@@ -26,6 +26,8 @@ class User extends Authenticatable
         'password_hash',
         'codigo_empleado',
         'especialidad',
+        'sueldo_mensual',
+        'costo_hora',
         'fecha_ingreso',
         'activo',
         'fcm_token',
@@ -45,7 +47,25 @@ class User extends Authenticatable
         'fecha_ingreso' => 'date',
         'ultimo_acceso' => 'datetime',
         'preferencias' => 'array',
+        'sueldo_mensual' => 'decimal:2',
+        'costo_hora' => 'decimal:2',
     ];
+
+    /**
+     * Obtiene el costo hora calculado del empleado (o tarifa fija por defecto si no se especificó)
+     */
+    public function getCostoHoraCalculadoAttribute(): float
+    {
+        if ($this->costo_hora && $this->costo_hora > 0) {
+            return (float) $this->costo_hora;
+        }
+
+        if ($this->sueldo_mensual && $this->sueldo_mensual > 0) {
+            return round((float) $this->sueldo_mensual / 208, 2);
+        }
+
+        return 25.00; // Tarifa base por defecto
+    }
 
     /**
      * Sobrescribir el campo de contraseña para la autenticación de Laravel
@@ -95,6 +115,22 @@ class User extends Authenticatable
         }
 
         return $roleName === $roles;
+    }
+
+    /**
+     * Verifica si el usuario posee un permiso específico en un módulo.
+     */
+    public function hasPermission(string $modulo, string $accion): bool
+    {
+        if ($this->isAdmin()) {
+            return true;
+        }
+
+        if (!$this->relationLoaded('role')) {
+            $this->load('role');
+        }
+
+        return $this->role ? $this->role->hasPermission($modulo, $accion) : false;
     }
 
     public function isAdmin(): bool

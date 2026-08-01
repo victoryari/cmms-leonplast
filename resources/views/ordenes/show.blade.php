@@ -31,12 +31,29 @@
         </div>
 
         <div class="flex items-center space-x-2">
-            <!-- Botones de Acción de Pausa / Reanudación para el Técnico -->
+            <!-- Botones de Acción de Estado y Tiempos para el Técnico / Supervisor -->
             @if(auth()->user()->isTechnician() || auth()->user()->hasRole(['Administrador', 'Supervisor', 'Gerente_Mantenimiento']))
-                @if($ot->estado == 'En_Progreso')
-                <button @click="pauseModal = true" class="px-4 py-2 rounded-xl bg-amber-600/20 hover:bg-amber-600 text-amber-300 hover:text-white border border-amber-500/30 text-xs font-bold transition flex items-center space-x-1.5">
-                    <span>⏸️ Pausar Trabajo</span>
-                </button>
+                @if($ot->estado == 'Aprobada')
+                <form action="{{ route('ordenes.update-status', $ot->id) }}" method="POST">
+                    @csrf
+                    <input type="hidden" name="nuevo_estado" value="En_Progreso">
+                    <button type="submit" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs shadow-lg shadow-indigo-600/30 transition flex items-center space-x-1.5 transform active:scale-95">
+                        <span>▶️ Iniciar Trabajo</span>
+                    </button>
+                </form>
+                @elseif($ot->estado == 'En_Progreso')
+                <div class="flex items-center space-x-2">
+                    <button @click="pauseModal = true" class="px-4 py-2 rounded-xl bg-amber-600/20 hover:bg-amber-600 text-amber-300 hover:text-white border border-amber-500/30 text-xs font-bold transition flex items-center space-x-1.5">
+                        <span>⏸️ Pausar Trabajo</span>
+                    </button>
+                    <form action="{{ route('ordenes.update-status', $ot->id) }}" method="POST">
+                        @csrf
+                        <input type="hidden" name="nuevo_estado" value="Completada">
+                        <button type="submit" onclick="return confirm('¿Confirmas que la reparación/mantenimiento se ha completado en su totalidad?')" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs shadow-lg shadow-emerald-600/30 transition flex items-center space-x-1.5">
+                            <span>✓ Finalizar OT</span>
+                        </button>
+                    </form>
+                </div>
                 @elseif($ot->estado == 'En_Pausa')
                 <form action="{{ route('ordenes.resume', $ot->id) }}" method="POST">
                     @csrf
@@ -127,6 +144,31 @@
                     @endif
                 </div>
 
+                @php
+                    $rawFotos = $ot->fotos ?? ['antes' => [], 'despues' => []];
+                    $fotosAntes = [];
+                    $fotosDespues = [];
+
+                    if (is_array($rawFotos)) {
+                        if (isset($rawFotos[0]) && is_array($rawFotos[0])) {
+                            foreach ($rawFotos as $item) {
+                                $t = strtolower($item['tipo'] ?? 'antes');
+                                $url = $item['url_foto'] ?? ($item['url'] ?? '');
+                                if ($url) {
+                                    if ($t === 'despues') {
+                                        $fotosDespues[] = $url;
+                                    } else {
+                                        $fotosAntes[] = $url;
+                                    }
+                                }
+                            }
+                        } else {
+                            $fotosAntes = $rawFotos['antes'] ?? [];
+                            $fotosDespues = $rawFotos['despues'] ?? [];
+                        }
+                    }
+                @endphp
+
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <!-- Column: Fotos ANTES -->
                     <div class="p-4 rounded-2xl bg-slate-950/60 border border-rose-500/20 space-y-3">
@@ -135,7 +177,7 @@
                         </div>
 
                         <div class="grid grid-cols-2 gap-2">
-                            @forelse(is_array($ot->fotos) ? ($ot->fotos['antes'] ?? []) : [] as $fotoUrl)
+                            @forelse($fotosAntes as $fotoUrl)
                             <a href="{{ $fotoUrl }}" target="_blank" class="block aspect-square rounded-xl overflow-hidden border border-slate-800 hover:border-blue-500 transition">
                                 <img src="{{ $fotoUrl }}" class="w-full h-full object-cover">
                             </a>
@@ -152,7 +194,7 @@
                         </div>
 
                         <div class="grid grid-cols-2 gap-2">
-                            @forelse(is_array($ot->fotos) ? ($ot->fotos['despues'] ?? []) : [] as $fotoUrl)
+                            @forelse($fotosDespues as $fotoUrl)
                             <a href="{{ $fotoUrl }}" target="_blank" class="block aspect-square rounded-xl overflow-hidden border border-slate-800 hover:border-emerald-500 transition">
                                 <img src="{{ $fotoUrl }}" class="w-full h-full object-cover">
                             </a>

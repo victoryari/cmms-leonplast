@@ -231,7 +231,8 @@ class ApiWorkOrderController extends Controller
 
         $totalHoras = LaborTime::where('orden_trabajo_id', $ot->id)->sum('horas_trabajadas');
         $ot->duracion_real_horas = $totalHoras;
-        $ot->costo_mano_obra = $totalHoras * 25.00;
+        $tarifaTecnico = $ot->tecnico?->costo_hora_calculado ?? 25.00;
+        $ot->costo_mano_obra = $totalHoras * $tarifaTecnico;
         $ot->costo_real = ($ot->costo_repuestos ?? 0) + $ot->costo_mano_obra;
 
         $ot->update(['estado' => 'En_Pausa']);

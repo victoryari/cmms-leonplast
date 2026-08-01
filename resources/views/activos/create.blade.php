@@ -19,7 +19,7 @@
 
     <!-- Main Card Form -->
     <div class="p-6 md:p-8 rounded-3xl bg-slate-900 border border-slate-800 shadow-2xl">
-        <form action="{{ route('activos.store') }}" method="POST" class="space-y-6">
+        <form action="{{ route('activos.store') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
             @csrf
 
             <!-- Section 1: Basic Information -->
@@ -132,7 +132,32 @@
                 </div>
             </div>
 
-            <!-- Section 4: Remarks -->
+            <!-- Section 4: Fotografía del Equipo -->
+            <div class="pt-4 border-t border-slate-800">
+                <h3 class="text-xs font-bold text-cyan-400 uppercase tracking-wider mb-4">4. Fotografía del Equipo / Activo</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Imagen del Activo (JPG, PNG, WEBP - Máx 5MB)</label>
+                        <input type="file" id="imagen" name="imagen" accept="image/jpeg,image/png,image/webp"
+                               onchange="previewAssetImage(event)"
+                               class="w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-cyan-400 hover:file:bg-slate-700 file:cursor-pointer bg-slate-950 border border-slate-800 rounded-xl p-2 focus:outline-none focus:border-cyan-500">
+                        <p class="text-[11px] text-slate-500 mt-1">Una fotografía clara del equipo facilita su identificación física y validación en rondas de inspección.</p>
+                    </div>
+
+                    <div class="flex flex-col items-center justify-center p-3 rounded-2xl bg-slate-950 border border-slate-800 text-center min-h-[120px]">
+                        <div id="image-preview-container" class="hidden w-full h-28 rounded-xl overflow-hidden relative">
+                            <img id="image-preview" src="#" alt="Vista previa de activo" class="w-full h-full object-cover rounded-xl">
+                        </div>
+                        <div id="image-placeholder" class="text-slate-500 flex flex-col items-center space-y-1 py-2">
+                            <svg class="w-8 h-8 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                            <span class="text-[11px]">Sin imagen seleccionada</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 5: Remarks -->
             <div class="pt-4 border-t border-slate-800">
                 <label for="descripcion" class="block text-xs font-semibold text-slate-300 mb-1">Observaciones / Especificaciones Técnicas</label>
                 <textarea id="descripcion" name="descripcion" rows="3" placeholder="Detalles de potencia, caudal, tonelaje de cierre, observaciones de instalación..."
@@ -154,4 +179,26 @@
     </div>
 
 </div>
+
+<script>
+function previewAssetImage(event) {
+    const input = event.target;
+    const previewContainer = document.getElementById('image-preview-container');
+    const previewImage = document.getElementById('image-preview');
+    const placeholder = document.getElementById('image-placeholder');
+
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            previewImage.src = e.target.result;
+            previewContainer.classList.remove('hidden');
+            placeholder.classList.add('hidden');
+        }
+        reader.readAsDataURL(input.files[0]);
+    } else {
+        previewContainer.classList.add('hidden');
+        placeholder.classList.remove('hidden');
+    }
+}
+</script>
 @endsection
