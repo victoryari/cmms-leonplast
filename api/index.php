@@ -3,7 +3,7 @@
 define('LARAVEL_START', microtime(true));
 
 // Ensure writable directories for Vercel Serverless environment (/tmp)
-$tmpDirs = ['/tmp/views', '/tmp/sessions', '/tmp/cache'];
+$tmpDirs = ['/tmp/views', '/tmp/sessions', '/tmp/cache', '/tmp/logs'];
 foreach ($tmpDirs as $dir) {
     if (!is_dir($dir)) {
         @mkdir($dir, 0755, true);
@@ -17,6 +17,8 @@ putenv('APP_ROUTES_CACHE=/tmp/routes.php');
 putenv('APP_SERVICES_CACHE=/tmp/services.php');
 putenv('VIEW_COMPILED_PATH=/tmp/views');
 putenv('LOG_CHANNEL=stderr');
+putenv('LOG_STACK=stderr');
+putenv('LOG_PATH=/tmp/logs/laravel.log');
 putenv('CACHE_STORE=array');
 
 $_ENV['APP_CONFIG_CACHE'] = '/tmp/config.php';
@@ -26,6 +28,8 @@ $_ENV['APP_ROUTES_CACHE'] = '/tmp/routes.php';
 $_ENV['APP_SERVICES_CACHE'] = '/tmp/services.php';
 $_ENV['VIEW_COMPILED_PATH'] = '/tmp/views';
 $_ENV['LOG_CHANNEL'] = 'stderr';
+$_ENV['LOG_STACK'] = 'stderr';
+$_ENV['LOG_PATH'] = '/tmp/logs/laravel.log';
 $_ENV['CACHE_STORE'] = 'array';
 
 try {
