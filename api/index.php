@@ -4,7 +4,10 @@
 // PASO 1: Crear directorios en /tmp ANTES de que Laravel arranque
 // El filesystem de Vercel es read-only excepto /tmp
 // ============================================================
+$tmpBootstrap = '/tmp/bootstrap/cache';
 $tmpDirs = [
+    '/tmp/bootstrap',
+    '/tmp/bootstrap/cache',
     '/tmp/logs',
     '/tmp/framework',
     '/tmp/framework/views',
@@ -21,35 +24,46 @@ foreach ($tmpDirs as $dir) {
 }
 
 // ============================================================
-// PASO 2: Establecer variables de entorno ANTES del autoloader
-// LARAVEL_STORAGE_PATH es leído nativamente por Laravel >= 11
-// SESSION_DRIVER y CACHE_STORE deben apuntar a drivers sin filesystem
+// PASO 2: Copiar archivos de cache de bootstrap/cache a /tmp/bootstrap/cache
+// Los archivos se despliegan en /var/task/user/bootstrap/cache/ (read-only)
+// PackageManifest necesita poder escribirlos, por eso los copiamos a /tmp
 // ============================================================
-$vercelEnvOverrides = [
-    'LARAVEL_STORAGE_PATH' => '/tmp',
-    'LOG_CHANNEL'          => 'stderr',
-    'LOG_STACK'            => 'stderr',
-    'CACHE_STORE'          => 'array',
-    'SESSION_DRIVER'       => 'array',   // array = en memoria, sin filesystem
-    'QUEUE_CONNECTION'     => 'sync',
-];
-
-foreach ($vercelEnvOverrides as $key => $value) {
-    // Solo sobreescribir si NO está definido por Vercel ya
-    if (empty($_ENV[$key]) && empty($_SERVER[$key])) {
-        putenv("$key=$value");
-        $_ENV[$key] = $value;
-        $_SERVER[$key] = $value;
+$srcCacheDir = __DIR__ . '/../bootstrap/cache';
+$cacheFiles = ['packages.php', 'services.php', 'config.php', 'routes-v7.php', 'events.php'];
+foreach ($cacheFiles as $file) {
+    $src = $srcCacheDir . '/' . $file;
+    $dst = $tmpBootstrap . '/' . $file;
+    if (file_exists($src) && !file_exists($dst)) {
+        @copy($src, $dst);
     }
 }
 
-// Forzar siempre LARAVEL_STORAGE_PATH a /tmp (crítico)
-putenv('LARAVEL_STORAGE_PATH=/tmp');
-$_ENV['LARAVEL_STORAGE_PATH'] = '/tmp';
-$_SERVER['LARAVEL_STORAGE_PATH'] = '/tmp';
+// ============================================================
+// PASO 3: Establecer variables de entorno ANTES del autoloader
+// ============================================================
+$vercelEnvOverrides = [
+    'LARAVEL_STORAGE_PATH'  => '/tmp',
+    'APP_BOOTSTRAP_PATH'    => '/tmp/bootstrap',
+    'APP_PACKAGES_CACHE'    => '/tmp/bootstrap/cache/packages.php',
+    'APP_SERVICES_CACHE'    => '/tmp/bootstrap/cache/services.php',
+    'APP_CONFIG_CACHE'      => '/tmp/bootstrap/cache/config.php',
+    'APP_ROUTES_CACHE'      => '/tmp/bootstrap/cache/routes-v7.php',
+    'APP_EVENTS_CACHE'      => '/tmp/bootstrap/cache/events.php',
+    'LOG_CHANNEL'           => 'stderr',
+    'LOG_STACK'             => 'stderr',
+    'CACHE_STORE'           => 'array',
+    'SESSION_DRIVER'        => 'array',
+    'QUEUE_CONNECTION'      => 'sync',
+];
+
+foreach ($vercelEnvOverrides as $key => $value) {
+    putenv("$key=$value");
+    $_ENV[$key] = $value;
+    $_SERVER[$key] = $value;
+}
 
 // ============================================================
-// PASO 3: Ejecutar la aplicación Laravel
+// PASO 4: Ejecutar la aplicación Laravel
 // ============================================================
 try {
     require __DIR__ . '/../public/index.php';

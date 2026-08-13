@@ -1,2 +1,3 @@
-*
-!.gitignore
+# Solo ignorar archivos de entorno y temporales locales
+# Los archivos .php de cache (packages, services, config, routes) son necesarios para Vercel
+*.tmp
