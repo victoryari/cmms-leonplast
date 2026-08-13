@@ -23,11 +23,7 @@ foreach ($tmpDirs as $dir) {
 }
 
 // ============================================================
-// PASO 2: Copiar bootstrap/cache/*.php generados por el build a /tmp
-// Durante el build de Vercel: composer install --no-dev +
-//   php artisan package:discover -> genera packages.php y services.php
-//   SIN dev-packages (pail, sail, collision, etc.)
-// En runtime el dir es read-only, por eso copiamos a /tmp donde sí escribe
+// PASO 2: Copiar bootstrap/cache/*.php generados en build a /tmp
 // ============================================================
 $srcCacheDir = __DIR__ . '/../bootstrap/cache';
 $runtimeCacheDir = '/tmp/bootstrap/cache';
@@ -40,26 +36,40 @@ foreach (['packages.php', 'services.php'] as $file) {
 }
 
 // ============================================================
-// PASO 3: Establecer variables de entorno ANTES del autoloader
-// LARAVEL_STORAGE_PATH  → /tmp  (leído nativamente por Laravel >= 11)
-// APP_PACKAGES_CACHE    → /tmp/bootstrap/cache/packages.php (writable)
-// APP_SERVICES_CACHE    → /tmp/bootstrap/cache/services.php (writable)
-// LOG_CHANNEL           → stderr (sin escritura a disco)
-// CACHE_STORE           → array  (en memoria)
-// SESSION_DRIVER        → array  (en memoria, sin filesystem)
+// PASO 3: Definir todas las variables de entorno de producción
+// Inyectamos las variables directamente antes de cargar Laravel
 // ============================================================
 $envOverrides = [
+    'APP_NAME'                => 'CMMS Leon Plast',
+    'APP_ENV'                 => 'production',
+    'APP_KEY'                 => 'base64:S3JDpvAcpIdSpJp1nyJQGi6lEvdFImge7j5pi5eUAUU=',
+    'APP_DEBUG'               => 'true',
+    'APP_URL'                 => 'https://cmms-leonplast-5he3-ochre.vercel.app',
+    'APP_LOCALE'              => 'es',
+    'APP_FALLBACK_LOCALE'     => 'es',
+    'APP_TIMEZONE'            => 'America/Lima',
+    'APP_MAINTENANCE_DRIVER'  => 'file',
+    'APP_MAINTENANCE_STORE'   => 'file',
+    'DB_CONNECTION'           => 'mysql',
+    'DB_HOST'                 => 'gateway01.us-west-2.prod.aws.tidbcloud.com',
+    'DB_PORT'                 => '4000',
+    'DB_DATABASE'             => 'cmms_leonplast',
+    'DB_USERNAME'             => '3S6n8bNRbZXLUhm.root',
+    'DB_PASSWORD'             => 'VNOAbPXLCQ1iBBqr',
+    'SESSION_DRIVER'          => 'array',
+    'SESSION_LIFETIME'        => '120',
+    'CACHE_STORE'             => 'array',
+    'QUEUE_CONNECTION'        => 'sync',
+    'MAIL_MAILER'             => 'log',
+    'LOG_CHANNEL'             => 'stderr',
+    'LOG_STACK'               => 'stderr',
+    'FILESYSTEM_DISK'         => 'local',
+    'BCRYPT_ROUNDS'           => '12',
     'LARAVEL_STORAGE_PATH'    => '/tmp',
     'APP_PACKAGES_CACHE'      => '/tmp/bootstrap/cache/packages.php',
     'APP_SERVICES_CACHE'      => '/tmp/bootstrap/cache/services.php',
-    'APP_MAINTENANCE_DRIVER'  => 'file',   // evita Manager::createDriver('') en Vercel
-    'APP_MAINTENANCE_STORE'   => 'file',
-    'LOG_CHANNEL'             => 'stderr',
-    'LOG_STACK'               => 'stderr',
-    'CACHE_STORE'             => 'array',
-    'SESSION_DRIVER'          => 'array',
-    'QUEUE_CONNECTION'        => 'sync',
 ];
+
 foreach ($envOverrides as $key => $value) {
     putenv("$key=$value");
     $_ENV[$key] = $value;
@@ -72,8 +82,10 @@ foreach ($envOverrides as $key => $value) {
 try {
     require __DIR__ . '/../public/index.php';
 } catch (\Throwable $e) {
-    http_response_code(500);
-    header('Content-Type: text/plain');
+    if (!headers_sent()) {
+        http_response_code(500);
+        header('Content-Type: text/plain');
+    }
     echo "ERROR FATAL EN SERVERLESS VERCEL:\n";
     echo "Tipo: " . get_class($e) . "\n";
     echo "Mensaje: " . $e->getMessage() . "\n";
