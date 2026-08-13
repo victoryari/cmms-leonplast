@@ -23,17 +23,17 @@ foreach ($tmpDirs as $dir) {
 }
 
 // ============================================================
-// PASO 2: Copiar packages.php y services.php a /tmp/bootstrap/cache
-// Estos archivos se despliegan en read-only; PackageManifest necesita
-// poder escribirlos. Los copiamos a /tmp donde sí puede escribir.
-// NOTA: NO copiamos config.php ni routes.php porque contienen rutas
-// locales de Windows hardcodeadas. Laravel los regenerará con rutas correctas.
+// PASO 2: Copiar bootstrap/cache/*.php generados por el build a /tmp
+// Durante el build de Vercel: composer install --no-dev +
+//   php artisan package:discover -> genera packages.php y services.php
+//   SIN dev-packages (pail, sail, collision, etc.)
+// En runtime el dir es read-only, por eso copiamos a /tmp donde sí escribe
 // ============================================================
 $srcCacheDir = __DIR__ . '/../bootstrap/cache';
-$cacheFilesToCopy = ['packages.php', 'services.php'];
-foreach ($cacheFilesToCopy as $file) {
+$runtimeCacheDir = '/tmp/bootstrap/cache';
+foreach (['packages.php', 'services.php'] as $file) {
     $src = $srcCacheDir . '/' . $file;
-    $dst = '/tmp/bootstrap/cache/' . $file;
+    $dst = $runtimeCacheDir . '/' . $file;
     if (file_exists($src) && !file_exists($dst)) {
         @copy($src, $dst);
     }
@@ -41,24 +41,23 @@ foreach ($cacheFilesToCopy as $file) {
 
 // ============================================================
 // PASO 3: Establecer variables de entorno ANTES del autoloader
-// LARAVEL_STORAGE_PATH es leído nativamente por Laravel >= 11
-// APP_PACKAGES_CACHE y APP_SERVICES_CACHE apuntan a /tmp (writable)
-// LOG_CHANNEL=stderr para no intentar escribir en el filesystem
-// SESSION_DRIVER=array y CACHE_STORE=array para evitar I/O al disco
+// LARAVEL_STORAGE_PATH  → /tmp  (leído nativamente por Laravel >= 11)
+// APP_PACKAGES_CACHE    → /tmp/bootstrap/cache/packages.php (writable)
+// APP_SERVICES_CACHE    → /tmp/bootstrap/cache/services.php (writable)
+// LOG_CHANNEL           → stderr (sin escritura a disco)
+// CACHE_STORE           → array  (en memoria)
+// SESSION_DRIVER        → array  (en memoria, sin filesystem)
 // ============================================================
 $envOverrides = [
     'LARAVEL_STORAGE_PATH' => '/tmp',
     'APP_PACKAGES_CACHE'   => '/tmp/bootstrap/cache/packages.php',
     'APP_SERVICES_CACHE'   => '/tmp/bootstrap/cache/services.php',
-    // NO definir APP_CONFIG_CACHE ni APP_ROUTES_CACHE:
-    // Laravel los leerá dinámicamente desde /config/ con storage_path()=/tmp correcto
     'LOG_CHANNEL'          => 'stderr',
     'LOG_STACK'            => 'stderr',
     'CACHE_STORE'          => 'array',
     'SESSION_DRIVER'       => 'array',
     'QUEUE_CONNECTION'     => 'sync',
 ];
-
 foreach ($envOverrides as $key => $value) {
     putenv("$key=$value");
     $_ENV[$key] = $value;
