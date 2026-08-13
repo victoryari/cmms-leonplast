@@ -1,6 +1,7 @@
 {
     "version": 2,
     "framework": null,
+    "outputDirectory": "public",
     "functions": {
         "api/index.php": {
             "runtime": "vercel-php@0.7.3"
@@ -23,12 +24,5 @@
             "src": "/(.*)",
             "dest": "/api/index.php"
         }
-    ],
-    "env": {
-        "APP_ENV": "production",
-        "APP_DEBUG": "false",
-        "LOG_CHANNEL": "stderr",
-        "SESSION_DRIVER": "database",
-        "CACHE_STORE": "array"
-    }
+    ]
 }
