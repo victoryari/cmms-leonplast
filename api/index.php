@@ -17,6 +17,7 @@ putenv('APP_ROUTES_CACHE=/tmp/routes.php');
 putenv('APP_SERVICES_CACHE=/tmp/services.php');
 putenv('VIEW_COMPILED_PATH=/tmp/views');
 putenv('LOG_CHANNEL=stderr');
+putenv('CACHE_STORE=array');
 
 $_ENV['APP_CONFIG_CACHE'] = '/tmp/config.php';
 $_ENV['APP_EVENTS_CACHE'] = '/tmp/events.php';
@@ -25,6 +26,7 @@ $_ENV['APP_ROUTES_CACHE'] = '/tmp/routes.php';
 $_ENV['APP_SERVICES_CACHE'] = '/tmp/services.php';
 $_ENV['VIEW_COMPILED_PATH'] = '/tmp/views';
 $_ENV['LOG_CHANNEL'] = 'stderr';
+$_ENV['CACHE_STORE'] = 'array';
 
 // Register autoload
 require __DIR__ . '/../vendor/autoload.php';
