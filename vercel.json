@@ -2,7 +2,6 @@
     "version": 2,
     "framework": null,
     "outputDirectory": "public",
-    "buildCommand": "composer install --no-dev --optimize-autoloader && php artisan package:discover --ansi",
     "functions": {
         "api/index.php": {
             "runtime": "vercel-php@0.7.3"
