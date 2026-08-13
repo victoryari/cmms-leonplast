@@ -16,9 +16,13 @@ class PublicRequestController extends Controller
      */
     public function create($codigoQr)
     {
+        if (!$this->validarCodigoActivo($codigoQr)) {
+            abort(404);
+        }
+
         $activo = Asset::where('codigo_activo', $codigoQr)
             ->orWhere('qr_code_content', $codigoQr)
-            ->orWhere('id', $codigoQr)
+            ->where('activo', true)
             ->firstOrFail();
 
         return view('public_requests.create', compact('activo'));
@@ -29,9 +33,13 @@ class PublicRequestController extends Controller
      */
     public function store(Request $request, $codigoQr)
     {
+        if (!$this->validarCodigoActivo($codigoQr)) {
+            abort(404);
+        }
+
         $activo = Asset::where('codigo_activo', $codigoQr)
             ->orWhere('qr_code_content', $codigoQr)
-            ->orWhere('id', $codigoQr)
+            ->where('activo', true)
             ->firstOrFail();
 
         $validated = $request->validate([
@@ -40,7 +48,7 @@ class PublicRequestController extends Controller
             'contacto' => 'nullable|string|max:100',
             'prioridad' => 'required|in:Baja,Media,Alta,Critica',
             'descripcion' => 'required|string|min:10',
-            'foto' => 'nullable|image|max:10240', // Max 10MB
+            'foto' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:10240', // Max 10MB
         ]);
 
         // Asignar al usuario solicitante por defecto de sistema
@@ -48,14 +56,13 @@ class PublicRequestController extends Controller
             ?? User::first();
 
         $year = date('Y');
-        $lastOrder = WorkOrder::whereYear('created_at', $year)->orderBy('id', 'desc')->first();
-        $nextNum = $lastOrder ? ((int) Str::afterLast($lastOrder->codigo_ot, '-')) + 1 : 1;
-        $codigoOt = sprintf("OT-%s-%03d", $year, $nextNum);
+        $codigoOt = WorkOrder::nextCodigoOt();
 
         $esEmergencia = in_array($validated['prioridad'], ['Alta', 'Critica']);
 
         $orden = WorkOrder::create([
             'codigo_ot' => $codigoOt,
+            'token_seguimiento' => Str::random(40),
             'activo_id' => $activo->id,
             'solicitante_id' => $solicitanteDefault->id,
             'tipo_ot' => $esEmergencia ? 'Urgente' : 'Correctivo',
@@ -85,17 +92,32 @@ class PublicRequestController extends Controller
         // Notificar inmediatamente a los supervisores sobre la avería reportada
         app(NotificationService::class)->notifySupervisorBreakdown($orden);
 
-        return redirect()->route('public.track', $orden->codigo_ot)
+        return redirect()->route('public.track', $orden->token_seguimiento)
             ->with('success', '¡Tu reporte de avería ha sido recibido por el equipo de mantenimiento!');
     }
 
     /**
      * Muestra la pantalla pública de seguimiento de la OT para el operario
      */
-    public function track($codigoOt)
+    public function track($token)
     {
-        $orden = WorkOrder::with(['equipo', 'tecnico'])->where('codigo_ot', $codigoOt)->firstOrFail();
+        $orden = WorkOrder::with(['equipo', 'activo', 'tecnico'])
+            ->where('token_seguimiento', $token)
+            ->firstOrFail();
 
         return view('public_requests.track', compact('orden'));
+    }
+
+    /**
+     * Valida que el parámetro de la ruta pública corresponda a un código de activo
+     * real (no un ID numérico) para evitar enumeración por secuencia.
+     */
+    private function validarCodigoActivo(string $codigoQr): bool
+    {
+        if (ctype_digit($codigoQr)) {
+            return false;
+        }
+
+        return (bool) preg_match('/^[A-Z0-9\-\/_.]+$/i', $codigoQr);
     }
 }

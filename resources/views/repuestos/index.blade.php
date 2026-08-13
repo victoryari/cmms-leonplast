@@ -47,7 +47,7 @@
 
         <div class="p-4 rounded-2xl bg-slate-900 border border-slate-800">
             <p class="text-[11px] font-semibold text-emerald-400 uppercase">Valoración Total</p>
-            <p class="text-2xl font-extrabold text-emerald-400 mt-1 font-mono">${{ number_format($metrics['valoracion_total'], 2) }}</p>
+            <p class="text-2xl font-extrabold text-emerald-400 mt-1 font-mono">S/. {{ number_format($metrics['valoracion_total'], 2) }}</p>
         </div>
 
         <div class="p-4 rounded-2xl bg-slate-900 border border-slate-800">
@@ -139,7 +139,7 @@
                         </td>
 
                         <td class="py-4 px-6 text-right font-mono font-bold text-slate-200">
-                            ${{ number_format($rep->costo_unitario, 2) }}
+                            S/. {{ number_format($rep->costo_unitario, 2) }}
                         </td>
 
                         <td class="py-4 px-6 text-center">

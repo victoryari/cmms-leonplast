@@ -14,6 +14,26 @@ use Illuminate\Support\Str;
 class ApiWorkOrderController extends Controller
 {
     /**
+     * Verifica que el usuario autenticado pueda operar sobre la OT.
+     * Técnicos y Solicitantes solo acceden a sus propias OTs; el resto de roles
+     * operativos (Administrador, Gerente, Supervisor) acceden a todas.
+     */
+    private function canAccessOt(WorkOrder $ot): bool
+    {
+        $user = request()->user();
+
+        if ($user->isTechnician() && $ot->tecnico_id !== $user->id) {
+            return false;
+        }
+
+        if ($user->isRequester() && $ot->solicitante_id !== $user->id) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
      * Listado general paginado de OTs
      */
     public function index(Request $request)
@@ -50,7 +70,10 @@ class ApiWorkOrderController extends Controller
     public function sync(Request $request)
     {
         $user = $request->user();
-        $since = $request->input('since');
+        $validated = $request->validate([
+            'since' => ['nullable', 'date_format:Y-m-d H:i:s'],
+        ]);
+        $since = $validated['since'] ?? null;
 
         $query = WorkOrder::with([
             'activo', 'solicitante', 'supervisor', 'tecnico', 
@@ -88,6 +111,10 @@ class ApiWorkOrderController extends Controller
             return response()->json(['success' => false, 'message' => 'Orden de trabajo no encontrada.'], 404);
         }
 
+        if (!$this->canAccessOt($ot)) {
+            return response()->json(['success' => false, 'message' => 'Acceso denegado a esta orden de trabajo.'], 403);
+        }
+
         return response()->json([
             'success' => true,
             'data' => $ot
@@ -103,6 +130,10 @@ class ApiWorkOrderController extends Controller
 
         if (!$ot) {
             return response()->json(['success' => false, 'message' => 'Orden de trabajo no encontrada.'], 404);
+        }
+
+        if (!$this->canAccessOt($ot)) {
+            return response()->json(['success' => false, 'message' => 'Acceso denegado a esta orden de trabajo.'], 403);
         }
 
         return response()->json([
@@ -125,11 +156,10 @@ class ApiWorkOrderController extends Controller
             'tipo_ot' => 'required|in:Correctivo,Preventivo,Predictivo,Urgente,Mejora',
             'prioridad' => 'required|in:Baja,Media,Alta,Crítica',
             'foto_base64' => 'nullable|string',
-            'foto' => 'nullable|image|max:10240',
+            'foto' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:10240',
         ]);
 
-        $count = WorkOrder::count() + 1;
-        $codigoOt = 'OT-' . date('Y') . '-' . str_pad($count, 3, '0', STR_PAD_LEFT);
+        $codigoOt = WorkOrder::nextCodigoOt();
 
         $fotos = ['antes' => [], 'despues' => []];
 
@@ -181,6 +211,10 @@ class ApiWorkOrderController extends Controller
             return response()->json(['success' => false, 'message' => 'Orden de trabajo no encontrada.'], 404);
         }
 
+        if (!$this->canAccessOt($ot)) {
+            return response()->json(['success' => false, 'message' => 'Acceso denegado a esta orden de trabajo.'], 403);
+        }
+
         $nuevoEstado = $request->input('estado');
         $observaciones = $request->input('observaciones', '');
 
@@ -212,6 +246,10 @@ class ApiWorkOrderController extends Controller
 
         $ot = WorkOrder::find($id);
         if (!$ot) return response()->json(['success' => false, 'message' => 'OT no encontrada.'], 404);
+
+        if (!$this->canAccessOt($ot)) {
+            return response()->json(['success' => false, 'message' => 'Acceso denegado a esta orden de trabajo.'], 403);
+        }
 
         $motivoTexto = str_replace('_', ' ', $request->input('motivo_pausa'));
         $nota = "Pausado por [{$motivoTexto}]: " . ($request->input('observaciones') ?? 'Sin detalle');
@@ -254,6 +292,10 @@ class ApiWorkOrderController extends Controller
         $ot = WorkOrder::find($id);
         if (!$ot) return response()->json(['success' => false, 'message' => 'OT no encontrada.'], 404);
 
+        if (!$this->canAccessOt($ot)) {
+            return response()->json(['success' => false, 'message' => 'Acceso denegado a esta orden de trabajo.'], 403);
+        }
+
         LaborTime::create([
             'orden_trabajo_id' => $ot->id,
             'tecnico_id' => $request->user()->id,
@@ -280,12 +322,16 @@ class ApiWorkOrderController extends Controller
     {
         $request->validate([
             'tipo_foto' => 'required|in:antes,despues',
-            'foto' => 'nullable|image|max:10240',
+            'foto' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:10240',
             'foto_base64' => 'nullable|string',
         ]);
 
         $ot = WorkOrder::find($id);
         if (!$ot) return response()->json(['success' => false, 'message' => 'OT no encontrada.'], 404);
+
+        if (!$this->canAccessOt($ot)) {
+            return response()->json(['success' => false, 'message' => 'Acceso denegado a esta orden de trabajo.'], 403);
+        }
 
         $tipo = $request->input('tipo_foto');
         $publicUrl = null;
@@ -330,6 +376,10 @@ class ApiWorkOrderController extends Controller
 
         $ot = WorkOrder::find($id);
         if (!$ot) return response()->json(['success' => false, 'message' => 'OT no encontrada.'], 404);
+
+        if (!$this->canAccessOt($ot)) {
+            return response()->json(['success' => false, 'message' => 'Acceso denegado a esta orden de trabajo.'], 403);
+        }
 
         $repuesto = SparePart::findOrFail($request->input('repuesto_id'));
 
@@ -393,6 +443,10 @@ class ApiWorkOrderController extends Controller
             return response()->json(['success' => false, 'message' => 'Orden de trabajo no encontrada.'], 404);
         }
 
+        if (!$this->canAccessOt($ot)) {
+            return response()->json(['success' => false, 'message' => 'Acceso denegado a esta orden de trabajo.'], 403);
+        }
+
         $diag = $ot->diagnosticos ?? [];
         $diag[] = $request->input('diagnostico');
 
@@ -417,25 +471,42 @@ class ApiWorkOrderController extends Controller
     }
 
     /**
-     * Helper privado para guardar imágenes codificadas en Base64
+     * Helper privado para guardar imágenes codificadas en Base64.
+     *
+     * Seguridad: solo se aceptan Data URIs de imagen, se valida el MIME real
+     * del contenido (finfo_buffer) contra una lista blanca y la extensión del
+     * archivo se deriva del contenido real, nunca del input del cliente.
      */
     private function saveBase64Image(string $base64String): ?string
     {
         try {
-            if (preg_match('/^data:image\/(\w+);base64,/', $base64String, $type)) {
-                $base64String = substr($base64String, strpos($base64String, ',') + 1);
-                $type = strtolower($type[1]);
-            } else {
-                $type = 'png';
-            }
-
-            $imageData = base64_decode($base64String);
-
-            if ($imageData === false) {
+            if (!preg_match('/^data:image\/([a-z0-9]+);base64,/', $base64String, $type)) {
                 return null;
             }
 
-            $fileName = 'fotos_ot/mobile_' . Str::random(20) . '.' . $type;
+            $base64String = substr($base64String, strpos($base64String, ',') + 1);
+
+            $imageData = base64_decode($base64String, true);
+
+            if ($imageData === false || $imageData === '') {
+                return null;
+            }
+
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            $realMime = finfo_buffer($finfo, $imageData);
+            finfo_close($finfo);
+
+            $mimeToExt = [
+                'image/jpeg' => 'jpg',
+                'image/png' => 'png',
+                'image/webp' => 'webp',
+            ];
+
+            if (!isset($mimeToExt[$realMime])) {
+                return null;
+            }
+
+            $fileName = 'fotos_ot/mobile_' . Str::random(32) . '.' . $mimeToExt[$realMime];
             Storage::disk('public')->put($fileName, $imageData);
 
             return $fileName;

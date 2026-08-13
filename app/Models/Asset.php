@@ -11,10 +11,12 @@ class Asset extends Model
     protected $table = 'activos';
 
     protected $fillable = [
+        'parent_id',
         'codigo_activo',
         'nombre',
         'descripcion',
         'categoria',
+        'tipo_clasificacion',
         'marca',
         'modelo',
         'numero_serie',
@@ -114,5 +116,20 @@ class Asset extends Model
             return asset('storage/' . ltrim($this->imagenes[0], '/'));
         }
         return null;
+    }
+
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(Asset::class, 'parent_id');
+    }
+
+    public function children(): HasMany
+    {
+        return $this->hasMany(Asset::class, 'parent_id');
+    }
+
+    public function proveedor(): BelongsTo
+    {
+        return $this->belongsTo(Supplier::class, 'proveedor_id');
     }
 }

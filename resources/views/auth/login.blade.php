@@ -5,14 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Iniciar Sesión - CMMS Leon Plast S.A.C.</title>
 
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="{{ asset('vendor/js/tailwind-cdn.js') }}"></script>
+    <script defer src="{{ asset('vendor/js/alpine.min.js') }}"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style> body { font-family: 'Plus Jakarta Sans', sans-serif; } </style>
 </head>
-<body class="h-full bg-slate-950 text-slate-100 flex items-center justify-center p-4 relative overflow-hidden" x-data="{ email: 'admin@leonplast.com', password: 'Password123!' }">
+<body class="h-full bg-slate-950 text-slate-100 flex items-center justify-center p-4 relative overflow-hidden" x-data="{ email: '', password: '' }">
 
     <!-- Glowing background accents -->
     <div class="absolute -top-40 -left-40 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl pointer-events-none"></div>
@@ -33,9 +33,8 @@
 
         <!-- Form Card -->
         <div class="bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-3xl p-8 shadow-2xl">
-            <h2 class="text-lg font-bold text-white mb-6 flex items-center justify-between">
+            <h2 class="text-lg font-bold text-white mb-6">
                 <span>Acceso al Sistema</span>
-                <span class="text-xs px-2.5 py-1 rounded-full bg-slate-800 text-slate-400 font-mono border border-slate-700">BD: cmms_leonplast</span>
             </h2>
 
             @if ($errors->any())
@@ -75,36 +74,6 @@
                     Iniciar Sesión
                 </button>
             </form>
-
-            <!-- Credenciales de Prueba Rápidas -->
-            <div class="mt-8 pt-6 border-t border-slate-800">
-                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Seleccionar usuario de prueba local:</p>
-                <div class="grid grid-cols-2 gap-2 text-xs">
-                    <button type="button" @click="email='admin@leonplast.com'; password='Password123!'" 
-                            class="p-2 rounded-lg bg-slate-950 border border-slate-800 text-left hover:border-blue-500/50 transition">
-                        <p class="font-semibold text-blue-400">1. Administrador</p>
-                        <p class="text-[10px] text-slate-500">admin@leonplast.com</p>
-                    </button>
-
-                    <button type="button" @click="email='gerente@leonplast.com'; password='Password123!'" 
-                            class="p-2 rounded-lg bg-slate-950 border border-slate-800 text-left hover:border-blue-500/50 transition">
-                        <p class="font-semibold text-indigo-400">2. Gerente Mant.</p>
-                        <p class="text-[10px] text-slate-500">gerente@leonplast.com</p>
-                    </button>
-
-                    <button type="button" @click="email='supervisor@leonplast.com'; password='Password123!'" 
-                            class="p-2 rounded-lg bg-slate-950 border border-slate-800 text-left hover:border-blue-500/50 transition">
-                        <p class="font-semibold text-purple-400">3. Supervisor</p>
-                        <p class="text-[10px] text-slate-500">supervisor@leonplast.com</p>
-                    </button>
-
-                    <button type="button" @click="email='tecnico@leonplast.com'; password='Password123!'" 
-                            class="p-2 rounded-lg bg-slate-950 border border-slate-800 text-left hover:border-blue-500/50 transition">
-                        <p class="font-semibold text-amber-400">4. Técnico</p>
-                        <p class="text-[10px] text-slate-500">tecnico@leonplast.com</p>
-                    </button>
-                </div>
-            </div>
         </div>
     </div>
 

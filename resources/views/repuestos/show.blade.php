@@ -61,7 +61,7 @@
 
                     <div class="p-3 rounded-2xl bg-slate-950 border border-slate-800">
                         <span class="text-[10px] text-slate-500 uppercase block font-semibold">Costo Unitario:</span>
-                        <strong class="text-emerald-400 font-mono font-bold">${{ number_format($repuesto->costo_unitario, 2) }}</strong>
+                        <strong class="text-emerald-400 font-mono font-bold">S/. {{ number_format($repuesto->costo_unitario, 2) }}</strong>
                     </div>
 
                     <div class="p-3 rounded-2xl bg-slate-950 border border-slate-800 col-span-2">
@@ -72,7 +72,7 @@
 
                     <div class="p-3 rounded-2xl bg-slate-950 border border-slate-800">
                         <span class="text-[10px] text-slate-500 uppercase block font-semibold">Valoración en Stock:</span>
-                        <strong class="text-emerald-400 font-mono font-bold">${{ number_format($repuesto->stock_actual * $repuesto->costo_unitario, 2) }}</strong>
+                        <strong class="text-emerald-400 font-mono font-bold">S/. {{ number_format($repuesto->stock_actual * $repuesto->costo_unitario, 2) }}</strong>
                     </div>
                 </div>
 

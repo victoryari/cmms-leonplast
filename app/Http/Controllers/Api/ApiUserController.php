@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules\Password;
 
 class ApiUserController extends Controller
 {
@@ -17,7 +18,7 @@ class ApiUserController extends Controller
             $query->whereHas('role', fn($q) => $q->where('nombre', $rol));
         }
 
-        $usuarios = $query->orderBy('nombres', 'asc')->get(['id', 'rol_id', 'nombres', 'apellidos', 'codigo_empleado', 'especialidad', 'email', 'telefono']);
+        $usuarios = $query->orderBy('nombres', 'asc')->get(['id', 'rol_id', 'nombres', 'apellidos', 'codigo_empleado', 'especialidad']);
 
         return response()->json([
             'success' => true,
@@ -64,7 +65,7 @@ class ApiUserController extends Controller
         ]);
 
         if ($request->filled('password')) {
-            $request->validate(['password' => 'required|string|min:6']);
+            $request->validate(['password' => ['required', Password::defaults()]]);
             $user->password_hash = Hash::make($request->input('password'));
         }
 

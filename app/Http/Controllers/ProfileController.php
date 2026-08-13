@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules\Password;
 
 class ProfileController extends Controller
 {
@@ -28,7 +29,7 @@ class ProfileController extends Controller
         if ($request->filled('current_password')) {
             $request->validate([
                 'current_password' => 'required',
-                'password' => 'required|string|min:6|confirmed',
+                'password' => ['required', 'confirmed', Password::defaults()],
             ]);
 
             if (!Hash::check($request->input('current_password'), $user->password_hash)) {

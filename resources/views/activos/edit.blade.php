@@ -35,11 +35,49 @@
                     </div>
 
                     <div>
+                        <label for="tipo_clasificacion" class="block text-xs font-semibold text-slate-300 mb-1">Tipo de Clasificación (Menú Catálogos) *</label>
+                        <select id="tipo_clasificacion" name="tipo_clasificacion" required 
+                                class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-cyan-400 font-bold focus:outline-none focus:border-blue-500">
+                            <option value="Equipo" {{ old('tipo_clasificacion', $activo->tipo_clasificacion) == 'Equipo' ? 'selected' : '' }}>⚙️ Equipo (Maquinaria de Planta)</option>
+                            <option value="Ubicacion" {{ old('tipo_clasificacion', $activo->tipo_clasificacion) == 'Ubicacion' ? 'selected' : '' }}>📍 Ubicación (Nave, Planta, Zona)</option>
+                            <option value="Herramienta" {{ old('tipo_clasificacion', $activo->tipo_clasificacion) == 'Herramienta' ? 'selected' : '' }}>🔧 Herramienta (Molde, Prensa, Calibre)</option>
+                            <option value="Repuesto_Suministro" {{ old('tipo_clasificacion', $activo->tipo_clasificacion) == 'Repuesto_Suministro' ? 'selected' : '' }}>🏬 Repuesto y Suministro</option>
+                            <option value="Digital" {{ old('tipo_clasificacion', $activo->tipo_clasificacion) == 'Digital' ? 'selected' : '' }}>💻 Digital (Software, Sensor IoT, Licencia)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="parent_id" class="block text-xs font-semibold text-slate-300 mb-1">Ubicación / Activo Padre (Árbol Jerárquico)</label>
+                        <select id="parent_id" name="parent_id" 
+                                class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500">
+                            <option value="">Sin Padre (Nodo Raíz / Planta)</option>
+                            @foreach($activosPadres ?? [] as $padre)
+                            <option value="{{ $padre->id }}" {{ old('parent_id', $activo->parent_id) == $padre->id ? 'selected' : '' }}>
+                                [{{ $padre->tipo_clasificacion }}] {{ $padre->nombre }} ({{ $padre->codigo_activo }})
+                            </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
                         <label for="categoria" class="block text-xs font-semibold text-slate-300 mb-1">Categoría del Equipo *</label>
                         <select id="categoria" name="categoria" required 
                                 class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500">
                             @foreach($catalogos['categorias_activos'] as $cat)
                             <option value="{{ $cat }}" {{ old('categoria', $activo->categoria) == $cat ? 'selected' : '' }}>{{ $cat }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="proveedor_id" class="block text-xs font-semibold text-slate-300 mb-1">Empresa Proveedora (Terceros)</label>
+                        <select id="proveedor_id" name="proveedor_id" 
+                                class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500">
+                            <option value="">Seleccione Proveedor Homologado</option>
+                            @foreach($proveedores ?? [] as $prov)
+                            <option value="{{ $prov->id }}" {{ old('proveedor_id', $activo->proveedor_id) == $prov->id ? 'selected' : '' }}>
+                                🏢 {{ $prov->razon_social }} (RUC: {{ $prov->ruc_documento }})
+                            </option>
                             @endforeach
                         </select>
                     </div>
@@ -113,7 +151,7 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                        <label for="costo_adquisicion" class="block text-xs font-semibold text-slate-300 mb-1">Costo Adquisición (USD $)</label>
+                        <label for="costo_adquisicion" class="block text-xs font-semibold text-slate-300 mb-1">Costo Adquisición (S/.)</label>
                         <input type="number" step="0.01" id="costo_adquisicion" name="costo_adquisicion" value="{{ old('costo_adquisicion', $activo->costo_adquisicion) }}"
                                class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500">
                     </div>

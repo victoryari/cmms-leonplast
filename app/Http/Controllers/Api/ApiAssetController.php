@@ -8,6 +8,26 @@ use App\Models\Asset;
 
 class ApiAssetController extends Controller
 {
+    /**
+     * Oculta campos financieros y de negocio a roles que solo pueden visualizar activos.
+     */
+    private function applySensitiveFilter($activos)
+    {
+        if (request()->user()?->hasPermission('activos', 'editar')) {
+            return $activos;
+        }
+
+        $hidden = ['costo_adquisicion', 'vida_util_estimada', 'proveedor_id', 'documentos'];
+
+        if ($activos instanceof \Illuminate\Database\Eloquent\Collection) {
+            $activos->each(fn ($item) => $item->makeHidden($hidden));
+        } elseif ($activos instanceof \Illuminate\Database\Eloquent\Model) {
+            $activos->makeHidden($hidden);
+        }
+
+        return $activos;
+    }
+
     public function index(Request $request)
     {
         $query = Asset::where('activo', true);
@@ -24,7 +44,7 @@ class ApiAssetController extends Controller
             $query->where('estado_operativo', $estado);
         }
 
-        $activos = $query->orderBy('codigo_activo', 'asc')->get();
+        $activos = $this->applySensitiveFilter($query->orderBy('codigo_activo', 'asc')->get());
 
         return response()->json([
             'success' => true,
@@ -48,7 +68,7 @@ class ApiAssetController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $activo
+            'data' => $this->applySensitiveFilter($activo)
         ]);
     }
 
@@ -72,7 +92,7 @@ class ApiAssetController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Activo identificado mediante código QR.',
-            'activo' => $activo
+            'activo' => $this->applySensitiveFilter($activo)
         ]);
     }
 

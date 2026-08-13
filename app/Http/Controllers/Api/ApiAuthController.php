@@ -36,7 +36,10 @@ class ApiAuthController extends Controller
 
         $user->update(['ultimo_acceso' => now()]);
         $deviceName = $request->input('device_name', 'flutter-mobile-app');
-        $token = $user->createToken($deviceName)->plainTextToken;
+
+        $user->tokens()->where('name', $deviceName)->delete();
+
+        $token = $user->createToken($deviceName, ['*'], now()->addMonths(6))->plainTextToken;
 
         return response()->json([
             'success' => true,

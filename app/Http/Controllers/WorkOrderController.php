@@ -102,8 +102,7 @@ class WorkOrderController extends Controller
             'permisos_especiales' => 'nullable|string|max:255',
         ]);
 
-        $count = WorkOrder::count() + 1;
-        $validated['codigo_ot'] = 'OT-' . date('Y') . '-' . str_pad($count, 3, '0', STR_PAD_LEFT);
+        $validated['codigo_ot'] = \App\Models\WorkOrder::nextCodigoOt();
         $validated['solicitante_id'] = auth()->id();
         $validated['creado_por'] = auth()->id();
         $validated['estado'] = 'Pendiente';
@@ -306,14 +305,27 @@ class WorkOrderController extends Controller
         $costoUnitario = $repuesto->costo_unitario;
         $costoTotal = $costoUnitario * $validated['cantidad'];
 
-        WorkOrderSparePart::create([
-            'orden_trabajo_id' => $ot->id,
-            'repuesto_id' => $repuesto->id,
-            'cantidad_usada' => $validated['cantidad'],
-            'costo_unitario' => $costoUnitario,
-            'costo_total' => $costoTotal,
-            'observaciones' => $validated['observaciones'],
-        ]);
+        $existingItem = WorkOrderSparePart::where('orden_trabajo_id', $ot->id)
+            ->where('repuesto_id', $repuesto->id)
+            ->first();
+
+        if ($existingItem) {
+            $nuevaCantidad = $existingItem->cantidad + $validated['cantidad'];
+            $existingItem->update([
+                'cantidad' => $nuevaCantidad,
+                'total' => $nuevaCantidad * $costoUnitario,
+                'motivo_uso' => $validated['observaciones'] ?? $existingItem->motivo_uso,
+            ]);
+        } else {
+            WorkOrderSparePart::create([
+                'orden_trabajo_id' => $ot->id,
+                'repuesto_id' => $repuesto->id,
+                'cantidad' => $validated['cantidad'],
+                'costo_unitario' => $costoUnitario,
+                'total' => $costoTotal,
+                'motivo_uso' => $validated['observaciones'] ?? null,
+            ]);
+        }
 
         $repuesto->registrarMovimiento(
             'Salida',
@@ -323,7 +335,7 @@ class WorkOrderController extends Controller
             $ot->id
         );
 
-        $ot->costo_repuestos = WorkOrderSparePart::where('orden_trabajo_id', $ot->id)->sum('costo_total');
+        $ot->costo_repuestos = WorkOrderSparePart::where('orden_trabajo_id', $ot->id)->sum('total');
         $ot->costo_real = $ot->costo_repuestos + ($ot->costo_mano_obra ?? 0);
         $ot->save();
 
@@ -336,7 +348,7 @@ class WorkOrderController extends Controller
         $ot = WorkOrder::findOrFail($id);
 
         $request->validate([
-            'foto' => 'required|image|max:10240',
+            'foto' => 'required|image|mimes:jpeg,jpg,png,webp|max:10240',
             'tipo_foto' => 'required|string',
             'descripcion' => 'nullable|string|max:255',
         ]);

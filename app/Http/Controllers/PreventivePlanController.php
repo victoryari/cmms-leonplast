@@ -92,8 +92,7 @@ class PreventivePlanController extends Controller
     {
         $plan = PreventivePlan::findOrFail($id);
 
-        $otCount = WorkOrder::count() + 1;
-        $codigoOt = 'OT-' . date('Y') . '-' . str_pad($otCount, 3, '0', STR_PAD_LEFT);
+        $codigoOt = WorkOrder::nextCodigoOt();
 
         $ot = WorkOrder::create([
             'codigo_ot' => $codigoOt,

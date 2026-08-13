@@ -11,6 +11,28 @@
         <p class="text-xs text-slate-400 mt-1">Gestiona tus datos personales y actualiza tu contraseña de acceso al CMMS</p>
     </div>
 
+    <!-- Alert System -->
+    @if(session('success'))
+    <div class="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center space-x-3 text-emerald-400">
+        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <span class="text-xs font-semibold">{{ session('success') }}</span>
+    </div>
+    @endif
+
+    @if($errors->any())
+    <div class="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 space-y-2">
+        <div class="flex items-center space-x-3 text-rose-450">
+            <svg class="w-5 h-5 shrink-0 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            <span class="text-xs font-bold text-rose-400">Por favor corrige los siguientes errores:</span>
+        </div>
+        <ul class="list-disc list-inside text-[11px] pl-8 space-y-1 text-slate-350">
+            @foreach($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+    @endif
+
     <!-- User Info Header Card -->
     <div class="p-6 rounded-3xl bg-slate-900 border border-slate-800 shadow-xl flex items-center space-x-4">
         <div class="w-16 h-16 rounded-full bg-blue-600/30 border-2 border-blue-500/40 flex items-center justify-center text-blue-300 font-bold text-xl shrink-0 shadow-lg">

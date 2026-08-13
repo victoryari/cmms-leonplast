@@ -21,8 +21,13 @@ class ApiReportController extends Controller
     {
         $this->analyticsService->refreshAssetMetrics();
 
-        $startDate = $request->input('start_date');
-        $endDate = $request->input('end_date');
+        $validated = $request->validate([
+            'start_date' => ['nullable', 'date', 'before_or_equal:end_date'],
+            'end_date' => ['nullable', 'date'],
+        ]);
+
+        $startDate = $validated['start_date'] ?? null;
+        $endDate = $validated['end_date'] ?? null;
 
         $kpis = $this->analyticsService->getGlobalKpis($startDate, $endDate);
 

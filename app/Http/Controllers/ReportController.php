@@ -22,8 +22,13 @@ class ReportController extends Controller
         // Recalcular métricas de activos en base de datos
         $this->analyticsService->refreshAssetMetrics();
 
-        $startDate = $request->input('start_date');
-        $endDate = $request->input('end_date');
+        $validated = $request->validate([
+            'start_date' => ['nullable', 'date', 'before_or_equal:end_date'],
+            'end_date' => ['nullable', 'date'],
+        ]);
+
+        $startDate = $validated['start_date'] ?? null;
+        $endDate = $validated['end_date'] ?? null;
 
         $kpis = $this->analyticsService->getGlobalKpis($startDate, $endDate);
         $paretoData = $this->analyticsService->getParetoBreakdown();
@@ -95,14 +100,14 @@ class ReportController extends Controller
                 }
 
                 fputcsv($file, [
-                    $act->codigo_activo,
-                    $act->nombre,
-                    $act->categoria,
-                    $act->ubicacion,
+                    $this->sanitizeCsvCell($act->codigo_activo),
+                    $this->sanitizeCsvCell($act->nombre),
+                    $this->sanitizeCsvCell($act->categoria),
+                    $this->sanitizeCsvCell($act->ubicacion),
                     $act->mtbf_horas ?? 720,
                     $act->mttr_horas ?? 0,
                     ($act->disponibilidad_porcentaje ?? 98.5) . '%',
-                    $act->estado_operativo,
+                    $this->sanitizeCsvCell($act->estado_operativo),
                     number_format($costoTotal, 2, '.', '')
                 ]);
             }
@@ -111,5 +116,21 @@ class ReportController extends Controller
         };
 
         return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * Neutraliza celdas que inician con caracteres de fórmula (CSV Injection)
+     * para evitar ejecución de fórmulas al abrir el archivo en Excel/Sheets.
+     */
+    private function sanitizeCsvCell(mixed $value): string
+    {
+        $value = (string) $value;
+        $value = str_replace(["\r", "\n"], ' ', $value);
+
+        if ($value !== '' && in_array($value[0], ['=', '+', '-', '@', "\t", "\r"], true)) {
+            return "'" . $value;
+        }
+
+        return $value;
     }
 }

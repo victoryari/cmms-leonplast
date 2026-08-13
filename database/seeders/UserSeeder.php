@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class UserSeeder extends Seeder
 {
@@ -20,7 +21,7 @@ class UserSeeder extends Seeder
                 'email' => 'admin@leonplast.com',
                 'codigo_empleado' => 'EMP-001',
                 'especialidad' => 'Gestión General CMMS',
-                'password_hash' => Hash::make('Password123!'),
+                'password_hash' => Hash::make(Str::password(16)),
                 'activo' => true,
                 'fecha_ingreso' => '2024-01-15',
             ],
@@ -33,7 +34,7 @@ class UserSeeder extends Seeder
                 'email' => 'gerente@leonplast.com',
                 'codigo_empleado' => 'EMP-002',
                 'especialidad' => 'Planificación Estratégica Industrial',
-                'password_hash' => Hash::make('Password123!'),
+                'password_hash' => Hash::make(Str::password(16)),
                 'activo' => true,
                 'fecha_ingreso' => '2024-02-01',
             ],
@@ -46,7 +47,7 @@ class UserSeeder extends Seeder
                 'email' => 'supervisor@leonplast.com',
                 'codigo_empleado' => 'EMP-003',
                 'especialidad' => 'Supervisión de Inyectoras y Neumática',
-                'password_hash' => Hash::make('Password123!'),
+                'password_hash' => Hash::make(Str::password(16)),
                 'activo' => true,
                 'fecha_ingreso' => '2024-03-10',
             ],
@@ -59,7 +60,7 @@ class UserSeeder extends Seeder
                 'email' => 'tecnico@leonplast.com',
                 'codigo_empleado' => 'EMP-004',
                 'especialidad' => 'Mecánica Industrial & Hidráulica',
-                'password_hash' => Hash::make('Password123!'),
+                'password_hash' => Hash::make(Str::password(16)),
                 'activo' => true,
                 'fecha_ingreso' => '2024-04-05',
             ],
@@ -72,7 +73,7 @@ class UserSeeder extends Seeder
                 'email' => 'solicitante@leonplast.com',
                 'codigo_empleado' => 'EMP-005',
                 'especialidad' => 'Operaciones de Planta y Producción',
-                'password_hash' => Hash::make('Password123!'),
+                'password_hash' => Hash::make(Str::password(16)),
                 'activo' => true,
                 'fecha_ingreso' => '2024-05-12',
             ],

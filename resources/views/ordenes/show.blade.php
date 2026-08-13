@@ -239,8 +239,8 @@
                                     <span class="font-semibold text-white">{{ $sp->repuesto?->nombre }}</span>
                                 </td>
                                 <td class="py-2.5 px-3 text-center font-bold text-amber-400 font-mono">{{ $sp->cantidad_usada }}</td>
-                                <td class="py-2.5 px-3 text-right font-mono text-slate-400">${{ number_format($sp->costo_unitario, 2) }}</td>
-                                <td class="py-2.5 px-3 text-right font-mono font-bold text-emerald-400">${{ number_format($sp->costo_total, 2) }}</td>
+                                <td class="py-2.5 px-3 text-right font-mono text-slate-400">S/. {{ number_format($sp->costo_unitario, 2) }}</td>
+                                <td class="py-2.5 px-3 text-right font-mono font-bold text-emerald-400">S/. {{ number_format($sp->costo_total, 2) }}</td>
                             </tr>
                             @empty
                             <tr>
@@ -364,15 +364,15 @@
                     </div>
                     <div class="flex justify-between text-slate-400">
                         <span>Mano de Obra:</span>
-                        <span class="font-mono text-white">${{ number_format($ot->costo_mano_obra ?? 0, 2) }}</span>
+                        <span class="font-mono text-white">S/. {{ number_format($ot->costo_mano_obra ?? 0, 2) }}</span>
                     </div>
                     <div class="flex justify-between text-slate-400">
                         <span>Repuestos:</span>
-                        <span class="font-mono text-amber-400">${{ number_format($ot->costo_repuestos ?? 0, 2) }}</span>
+                        <span class="font-mono text-amber-400">S/. {{ number_format($ot->costo_repuestos ?? 0, 2) }}</span>
                     </div>
                     <div class="flex justify-between text-white font-bold pt-1 border-t border-slate-800">
                         <span>Costo Total:</span>
-                        <span class="font-mono text-emerald-400 text-sm">${{ number_format($ot->costo_real ?? 0, 2) }}</span>
+                        <span class="font-mono text-emerald-400 text-sm">S/. {{ number_format($ot->costo_real ?? 0, 2) }}</span>
                     </div>
                 </div>
             </div>

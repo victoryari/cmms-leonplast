@@ -59,7 +59,7 @@
                 <span class="text-[11px] font-bold uppercase tracking-wider text-purple-400">Costo Total Mantenimiento</span>
                 <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
             </div>
-            <p class="text-3xl font-extrabold text-purple-400 mt-1 font-mono">${{ number_format($kpis['costo_total'], 2) }}</p>
+            <p class="text-3xl font-extrabold text-purple-400 mt-1 font-mono">S/. {{ number_format($kpis['costo_total'], 2) }}</p>
             <p class="text-[10px] text-slate-500">Inversión acumulada en mano de obra y repuestos</p>
         </div>
     </div>
@@ -97,15 +97,15 @@
             <div class="space-y-2 pt-2 border-t border-slate-800 text-xs">
                 <div class="flex items-center justify-between text-slate-300">
                     <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Preventivo:</span>
-                    <strong class="font-mono text-emerald-400">${{ number_format($kpis['costo_preventivo'], 2) }}</strong>
+                    <strong class="font-mono text-emerald-400">S/. {{ number_format($kpis['costo_preventivo'], 2) }}</strong>
                 </div>
                 <div class="flex items-center justify-between text-slate-300">
                     <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span> Correctivo:</span>
-                    <strong class="font-mono text-rose-400">${{ number_format($kpis['costo_correctivo'], 2) }}</strong>
+                    <strong class="font-mono text-rose-400">S/. {{ number_format($kpis['costo_correctivo'], 2) }}</strong>
                 </div>
                 <div class="flex items-center justify-between text-slate-300">
                     <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span> Mejoras / Otros:</span>
-                    <strong class="font-mono text-blue-400">${{ number_format($kpis['costo_otros'], 2) }}</strong>
+                    <strong class="font-mono text-blue-400">S/. {{ number_format($kpis['costo_otros'], 2) }}</strong>
                 </div>
             </div>
         </div>
@@ -168,7 +168,7 @@
                         </td>
 
                         <td class="py-3 px-4 text-right font-mono font-bold text-emerald-400">
-                            ${{ number_format($act->costo_total_mantenimiento, 2) }}
+                            S/. {{ number_format($act->costo_total_mantenimiento, 2) }}
                         </td>
                     </tr>
                     @endforeach
@@ -180,7 +180,7 @@
 </div>
 
 <!-- Chart.js Integration -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ asset('vendor/js/chart.umd.min.js') }}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         // 1. Chart de Pareto 80/20 (Barras + Línea Acumulada)

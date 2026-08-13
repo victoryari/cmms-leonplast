@@ -132,7 +132,7 @@
                         </div>
                     </div>
                 </div>
-            </div>   </div>
+            </div>
 
             <!-- Especificaciones Técnicas Card -->
             @if(!empty($activo->especificaciones_tecnicas))
@@ -187,7 +187,7 @@
                 
                 <div class="flex items-center justify-between py-1.5 border-b border-slate-800">
                     <span class="text-slate-500">Costo Adquisición:</span>
-                    <strong class="text-emerald-400 font-mono">USD ${{ number_format($activo->costo_adquisicion ?? 0, 2) }}</strong>
+                    <strong class="text-emerald-400 font-mono">S/. {{ number_format($activo->costo_adquisicion ?? 0, 2) }}</strong>
                 </div>
 
                 <div class="flex items-center justify-between py-1.5 border-b border-slate-800">

@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'CMMS Leon Plast') - Sistema de Mantenimiento Industrial</title>
     
-    <!-- Alpine.js & Tailwind CSS -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Alpine.js & Tailwind CSS (servidos localmente) -->
+    <script defer src="{{ asset('vendor/js/alpine.min.js') }}"></script>
+    <script src="{{ asset('vendor/js/tailwind-cdn.js') }}"></script>
     
     <!-- Google Fonts: Plus Jakarta Sans -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -24,7 +24,7 @@
     <div class="min-h-screen flex flex-col md:flex-row">
 
         <!-- Sidebar Navigation -->
-        <aside class="w-full md:w-64 bg-slate-900 border-r border-slate-800 flex flex-col justify-between shrink-0">
+        <aside class="w-full md:w-64 md:h-screen md:sticky md:top-0 bg-slate-900 border-r border-slate-800 flex flex-col justify-between shrink-0 overflow-y-auto scrollbar-thin">
             <div>
                 <!-- Brand Logo & Header -->
                 <div class="h-20 flex items-center px-6 border-b border-slate-800 space-x-3">
@@ -45,6 +45,14 @@
                         <span>Dashboard</span>
                     </a>
 
+                    <!-- Sección 1: Catálogos del Sistema (Activos, RRHH, Terceros) -->
+                    <div class="pt-3 pb-1">
+                        <p class="px-3 text-[10px] font-extrabold text-indigo-400 uppercase tracking-widest flex items-center space-x-1.5">
+                            <svg class="w-3.5 h-3.5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+                            <span>CATÁLOGOS</span>
+                        </p>
+                    </div>
+
                     @if(auth()->user()->hasPermission('activos', 'ver'))
                     <a href="{{ route('activos.index') }}" 
                        class="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 {{ request()->routeIs('activos.*') ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100' }}">
@@ -52,6 +60,30 @@
                         <span>Activos Industriales</span>
                     </a>
                     @endif
+
+                    @if(auth()->user()->hasPermission('usuarios_roles', 'ver'))
+                    <a href="{{ route('usuarios.index') }}" 
+                       class="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 {{ request()->routeIs('usuarios.*') || request()->routeIs('roles.*') ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100' }}">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                        <span>Recursos Humanos</span>
+                    </a>
+                    @endif
+
+                    @if(auth()->user()->isAdmin() || auth()->user()->isManager() || auth()->user()->isSupervisor())
+                    <a href="{{ route('terceros.index') }}" 
+                       class="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 {{ request()->routeIs('terceros.*') ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100' }}">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5m3 0h1m-1-4h.01M9 16h.01M9 12h.01M9 8h.01M15 16h.01M15 12h.01M15 8h.01"></path></svg>
+                        <span>Terceros (Proveedores)</span>
+                    </a>
+                    @endif
+
+                    <!-- Sección 2: Operaciones CMMS -->
+                    <div class="pt-3 pb-1">
+                        <p class="px-3 text-[10px] font-extrabold text-indigo-400 uppercase tracking-widest flex items-center space-x-1.5">
+                            <svg class="w-3.5 h-3.5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                            <span>OPERACIONES</span>
+                        </p>
+                    </div>
 
                     @if(auth()->user()->hasPermission('ordenes', 'ver'))
                     <a href="{{ route('ordenes.index') }}" 
@@ -93,16 +125,12 @@
                     </a>
                     @endif
 
-                    @if(auth()->user()->hasPermission('usuarios_roles', 'ver'))
-                    <a href="{{ route('usuarios.index') }}" 
-                       class="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 {{ request()->routeIs('usuarios.*') || request()->routeIs('roles.*') ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100' }}">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
-                        <span>Personal & Usuarios</span>
-                    </a>
-                    @endif
-
-                    <div class="pt-4">
-                        <p class="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Integraciones</p>
+                    <div class="pt-3 pb-1">
+                        <p class="px-3 text-[10px] font-extrabold text-indigo-400 uppercase tracking-widest flex items-center space-x-1.5">
+                            <svg class="w-3.5 h-3.5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                            <span>INTEGRACIONES</span>
+                        </p>
+                    </div>
                         <div class="mx-3 p-3 rounded-xl bg-slate-800/60 border border-slate-700/50">
                             <div class="flex items-center space-x-2 text-cyan-400 font-semibold text-xs mb-1">
                                 <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
@@ -110,7 +138,6 @@
                             </div>
                             <p class="text-[11px] text-slate-400 leading-relaxed">Conexión Sanctum habilitada para la App móvil en planta.</p>
                         </div>
-                    </div>
                 </nav>
             </div>
 

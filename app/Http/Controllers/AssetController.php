@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Asset;
 use App\Models\AssetCategory;
+use App\Models\SparePart;
 use App\Services\CatalogService;
 use Illuminate\Support\Str;
 
@@ -19,7 +20,7 @@ class AssetController extends Controller
 
     public function index(Request $request)
     {
-        $query = Asset::where('activo', true);
+        $query = Asset::with(['parent', 'proveedor'])->where('activo', true);
 
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
@@ -28,6 +29,10 @@ class AssetController extends Controller
                   ->orWhere('marca', 'like', "%{$search}%")
                   ->orWhere('modelo', 'like', "%{$search}%");
             });
+        }
+
+        if ($tipoClasificacion = $request->input('tipo_clasificacion')) {
+            $query->where('tipo_clasificacion', $tipoClasificacion);
         }
 
         if ($categoria = $request->input('categoria')) {
@@ -42,27 +47,34 @@ class AssetController extends Controller
             $query->where('area', $area);
         }
 
-        $activos = $query->orderBy('created_at', 'desc')->paginate(10)->withQueryString();
+        $activos = $query->orderBy('created_at', 'desc')->paginate(15)->withQueryString();
+
+        // Árbol Jerárquico Completo (Nodos Raíz con sus Hijos)
+        $arbolActivos = Asset::with('children.children')->whereNull('parent_id')->where('activo', true)->orderBy('nombre', 'asc')->get();
 
         $metrics = [
             'total' => Asset::where('activo', true)->count(),
-            'operativos' => Asset::where('activo', true)->where('estado_operativo', 'Operativo')->count(),
-            'mantenimiento' => Asset::where('activo', true)->where('estado_operativo', 'Mantenimiento')->count(),
-            'reparacion' => Asset::where('activo', true)->where('estado_operativo', 'Reparacion')->count(),
-            'fuera_servicio' => Asset::where('activo', true)->whereIn('estado_operativo', ['Fuera_de_servicio', 'Baja'])->count(),
+            'ubicaciones' => Asset::where('activo', true)->where('tipo_clasificacion', 'Ubicacion')->count(),
+            'equipos' => Asset::where('activo', true)->where('tipo_clasificacion', 'Equipo')->count(),
+            'herramientas' => Asset::where('activo', true)->where('tipo_clasificacion', 'Herramienta')->count(),
+            'repuestos_suministros' => Asset::where('activo', true)->where('tipo_clasificacion', 'Repuesto_Suministro')->count(),
+            'digitales' => Asset::where('activo', true)->where('tipo_clasificacion', 'Digital')->count(),
         ];
 
         $categorias = $this->catalogService->getCategoriasActivos();
         $areas = $this->catalogService->getAreasPlanta();
         $estadosOperativos = $this->catalogService->getEstadosOperativos();
 
-        return view('activos.index', compact('activos', 'metrics', 'categorias', 'areas', 'estadosOperativos'));
+        return view('activos.index', compact('activos', 'arbolActivos', 'metrics', 'categorias', 'areas', 'estadosOperativos'));
     }
 
     public function create()
     {
         $catalogos = $this->catalogService->getAllCatalogs();
-        return view('activos.create', compact('catalogos'));
+        $activosPadres = Asset::where('activo', true)->orderBy('nombre', 'asc')->get();
+        $proveedores = \App\Models\Supplier::where('activo', true)->orderBy('razon_social', 'asc')->get();
+
+        return view('activos.create', compact('catalogos', 'activosPadres', 'proveedores'));
     }
 
     public function store(Request $request)
@@ -70,6 +82,9 @@ class AssetController extends Controller
         $validated = $request->validate([
             'nombre' => 'required|string|max:200',
             'categoria' => 'required|string|max:100',
+            'tipo_clasificacion' => 'required|in:Ubicacion,Equipo,Herramienta,Repuesto_Suministro,Digital',
+            'parent_id' => 'nullable|exists:activos,id',
+            'proveedor_id' => 'nullable|exists:terceros,id',
             'marca' => 'nullable|string|max:100',
             'modelo' => 'nullable|string|max:100',
             'numero_serie' => 'nullable|string|max:100',
@@ -108,6 +123,9 @@ class AssetController extends Controller
     public function show($id)
     {
         $activo = Asset::with([
+            'parent',
+            'children',
+            'proveedor',
             'ordenesTrabajo' => fn($q) => $q->orderBy('created_at', 'desc')->take(10),
             'planesPreventivos',
         ])->findOrFail($id);
@@ -119,8 +137,10 @@ class AssetController extends Controller
     {
         $activo = Asset::findOrFail($id);
         $catalogos = $this->catalogService->getAllCatalogs();
+        $activosPadres = Asset::where('activo', true)->where('id', '!=', $activo->id)->orderBy('nombre', 'asc')->get();
+        $proveedores = \App\Models\Supplier::where('activo', true)->orderBy('razon_social', 'asc')->get();
 
-        return view('activos.edit', compact('activo', 'catalogos'));
+        return view('activos.edit', compact('activo', 'catalogos', 'activosPadres', 'proveedores'));
     }
 
     public function update(Request $request, $id)
@@ -130,6 +150,9 @@ class AssetController extends Controller
         $validated = $request->validate([
             'nombre' => 'required|string|max:200',
             'categoria' => 'required|string|max:100',
+            'tipo_clasificacion' => 'required|in:Ubicacion,Equipo,Herramienta,Repuesto_Suministro,Digital',
+            'parent_id' => 'nullable|exists:activos,id',
+            'proveedor_id' => 'nullable|exists:terceros,id',
             'marca' => 'nullable|string|max:100',
             'modelo' => 'nullable|string|max:100',
             'numero_serie' => 'nullable|string|max:100',
@@ -173,5 +196,87 @@ class AssetController extends Controller
     {
         $activo = Asset::findOrFail($id);
         return view('activos.qr_print', compact('activo'));
+    }
+
+    public function herramientas(Request $request)
+    {
+        $query = Asset::where('activo', true)
+            ->where(function($q) {
+                $q->where('tipo_clasificacion', 'Herramienta')
+                  ->orWhere('categoria', 'like', '%Herramienta%');
+            });
+
+        if ($search = $request->input('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('nombre', 'like', "%{$search}%")
+                  ->orWhere('codigo_activo', 'like', "%{$search}%")
+                  ->orWhere('marca', 'like', "%{$search}%");
+            });
+        }
+
+        $activos = $query->orderBy('nombre', 'asc')->paginate(15)->withQueryString();
+
+        $metrics = [
+            'total' => Asset::where('activo', true)->where('tipo_clasificacion', 'Herramienta')->count(),
+            'operativas' => Asset::where('activo', true)->where('tipo_clasificacion', 'Herramienta')->where('estado_operativo', 'Operativo')->count(),
+            'mantenimiento' => Asset::where('activo', true)->where('tipo_clasificacion', 'Herramienta')->where('estado_operativo', 'En_Mantenimiento')->count(),
+            'criticas' => Asset::where('activo', true)->where('tipo_clasificacion', 'Herramienta')->where(function($q) {
+                $q->where('estado_condicion', 'Critico')->orWhere('estado_operativo', 'Fuera_Servicio');
+            })->count(),
+        ];
+
+        return view('activos.herramientas', compact('activos', 'metrics'));
+    }
+
+    public function repuestosSuministros(Request $request)
+    {
+        $query = SparePart::query();
+
+        if ($search = $request->input('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('nombre', 'like', "%{$search}%")
+                  ->orWhere('codigo_sku', 'like', "%{$search}%")
+                  ->orWhere('categoria', 'like', "%{$search}%")
+                  ->orWhere('marca', 'like', "%{$search}%");
+            });
+        }
+
+        if ($categoria = $request->input('categoria')) {
+            $query->where('categoria', $categoria);
+        }
+
+        $repuestos = $query->orderBy('nombre', 'asc')->paginate(15)->withQueryString();
+
+        $metrics = [
+            'total_articulos' => SparePart::count(),
+            'categorias' => SparePart::distinct('categoria')->count('categoria'),
+            'marcas' => SparePart::distinct('marca')->whereNotNull('marca')->count('marca'),
+            'criticos' => SparePart::whereColumn('stock_actual', '<=', 'stock_minimo')->count(),
+        ];
+
+        return view('activos.repuestos_suministros', compact('repuestos', 'metrics'));
+    }
+
+    public function digitales(Request $request)
+    {
+        $query = Asset::where('activo', true)->where('tipo_clasificacion', 'Digital');
+
+        if ($search = $request->input('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('nombre', 'like', "%{$search}%")
+                  ->orWhere('codigo_activo', 'like', "%{$search}%")
+                  ->orWhere('modelo', 'like', "%{$search}%");
+            });
+        }
+
+        $activos = $query->orderBy('nombre', 'asc')->paginate(15)->withQueryString();
+
+        $metrics = [
+            'total' => Asset::where('activo', true)->where('tipo_clasificacion', 'Digital')->count(),
+            'operativos' => Asset::where('activo', true)->where('tipo_clasificacion', 'Digital')->where('estado_operativo', 'Operativo')->count(),
+            'revision' => Asset::where('activo', true)->where('tipo_clasificacion', 'Digital')->where('estado_operativo', 'En_Revision')->count(),
+        ];
+
+        return view('activos.digitales', compact('activos', 'metrics'));
     }
 }

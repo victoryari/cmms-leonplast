@@ -3,15 +3,33 @@
 @section('title', 'Registrar Nuevo Activo Industrial')
 
 @section('content')
+@php
+    $tipoActual = old('tipo_clasificacion', request('tipo_clasificacion', 'Equipo'));
+    $tituloPagina = match($tipoActual) {
+        'Herramienta' => 'Registrar Nueva Herramienta / Instrumento',
+        'Repuesto_Suministro' => 'Registrar Ficha de Repuesto / Suministro',
+        'Digital' => 'Registrar Nuevo Activo Digital / Licencia',
+        'Ubicacion' => 'Registrar Nueva Ubicación / Planta',
+        default => 'Registrar Nuevo Activo Industrial',
+    };
+    $subtituloPagina = match($tipoActual) {
+        'Herramienta' => 'Alta de herramientas de taller, instrumentos de medición y calibración',
+        'Repuesto_Suministro' => 'Registro de ficha técnica para catálogo de repuestos y consumibles',
+        'Digital' => 'Alta de licencias de software industrial, recetas PLC, firmwares y esquemas CAD/CAM',
+        'Ubicacion' => 'Alta de naves, zonas de planta o áreas operativas',
+        default => 'Alta de máquinas, inyectoras, compresores o auxiliares en el inventario de planta',
+    };
+@endphp
+
 <div class="max-w-4xl mx-auto space-y-6">
 
     <!-- Header & Action Bar -->
     <div class="flex items-center justify-between">
         <div>
-            <h2 class="text-2xl font-extrabold text-white tracking-tight">Registrar Nuevo Activo Industrial</h2>
-            <p class="text-xs text-slate-400 mt-1">Alta de máquinas, inyectoras, compresores o auxiliares en el inventario de planta</p>
+            <h2 class="text-2xl font-extrabold text-white tracking-tight">{{ $tituloPagina }}</h2>
+            <p class="text-xs text-slate-400 mt-1">{{ $subtituloPagina }}</p>
         </div>
-        <a href="{{ route('activos.index') }}" 
+        <a href="{{ url()->previous() ?: route('activos.index') }}" 
            class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs border border-slate-700 transition">
             ← Volver a Lista
         </a>
@@ -24,13 +42,39 @@
 
             <!-- Section 1: Basic Information -->
             <div>
-                <h3 class="text-xs font-bold text-blue-400 uppercase tracking-wider mb-4">1. Identificación Principal del Equipo</h3>
+                <h3 class="text-xs font-bold text-blue-400 uppercase tracking-wider mb-4">1. Identificación Principal</h3>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="md:col-span-2">
-                        <label for="nombre" class="block text-xs font-semibold text-slate-300 mb-1">Nombre o Denominación del Activo *</label>
-                        <input type="text" id="nombre" name="nombre" value="{{ old('nombre') }}" required placeholder="Ej: Inyectora de Plástico Engel Victory 250T"
+                        <label for="nombre" class="block text-xs font-semibold text-slate-300 mb-1">Nombre o Denominación *</label>
+                        <input type="text" id="nombre" name="nombre" value="{{ old('nombre') }}" required 
+                               placeholder="{{ $tipoActual == 'Herramienta' ? 'Ej: Calibrador Pie de Rey Digital 0-150mm Mitutoyo' : ($tipoActual == 'Digital' ? 'Ej: Licencia Siemens TIA Portal v17 SCADA' : 'Ej: Inyectora de Plástico Engel Victory 250T') }}"
                                class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500">
+                    </div>
+
+                    <div>
+                        <label for="tipo_clasificacion" class="block text-xs font-semibold text-slate-300 mb-1">Tipo de Clasificación (Menú Catálogos) *</label>
+                        <select id="tipo_clasificacion" name="tipo_clasificacion" required 
+                                class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-cyan-400 font-bold focus:outline-none focus:border-blue-500">
+                            <option value="Equipo" {{ $tipoActual == 'Equipo' ? 'selected' : '' }}>⚙️ Equipo (Maquinaria de Planta)</option>
+                            <option value="Ubicacion" {{ $tipoActual == 'Ubicacion' ? 'selected' : '' }}>📍 Ubicación (Nave, Planta, Zona)</option>
+                            <option value="Herramienta" {{ $tipoActual == 'Herramienta' ? 'selected' : '' }}>🔧 Herramienta (Taller, Calibración)</option>
+                            <option value="Repuesto_Suministro" {{ $tipoActual == 'Repuesto_Suministro' ? 'selected' : '' }}>🏬 Repuesto y Suministro</option>
+                            <option value="Digital" {{ $tipoActual == 'Digital' ? 'selected' : '' }}>💻 Digital (Software, Sensor IoT, Licencia)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="parent_id" class="block text-xs font-semibold text-slate-300 mb-1">Ubicación / Activo Padre (Árbol Jerárquico)</label>
+                        <select id="parent_id" name="parent_id" 
+                                class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500">
+                            <option value="">Sin Padre (Nodo Raíz / Planta)</option>
+                            @foreach($activosPadres ?? [] as $padre)
+                            <option value="{{ $padre->id }}" {{ old('parent_id') == $padre->id ? 'selected' : '' }}>
+                                [{{ $padre->tipo_clasificacion }}] {{ $padre->nombre }} ({{ $padre->codigo_activo }})
+                            </option>
+                            @endforeach
+                        </select>
                     </div>
 
                     <div>
@@ -40,6 +84,19 @@
                             <option value="">Seleccione Categoría</option>
                             @foreach($catalogos['categorias_activos'] as $cat)
                             <option value="{{ $cat }}" {{ old('categoria') == $cat ? 'selected' : '' }}>{{ $cat }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="proveedor_id" class="block text-xs font-semibold text-slate-300 mb-1">Empresa Proveedora (Terceros)</label>
+                        <select id="proveedor_id" name="proveedor_id" 
+                                class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500">
+                            <option value="">Seleccione Proveedor Homologado</option>
+                            @foreach($proveedores ?? [] as $prov)
+                            <option value="{{ $prov->id }}" {{ old('proveedor_id') == $prov->id ? 'selected' : '' }}>
+                                🏢 {{ $prov->razon_social }} (RUC: {{ $prov->ruc_documento }})
+                            </option>
                             @endforeach
                         </select>
                     </div>
@@ -113,7 +170,7 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                        <label for="costo_adquisicion" class="block text-xs font-semibold text-slate-300 mb-1">Costo Adquisición (USD $)</label>
+                        <label for="costo_adquisicion" class="block text-xs font-semibold text-slate-300 mb-1">Costo Adquisición (S/.)</label>
                         <input type="number" step="0.01" id="costo_adquisicion" name="costo_adquisicion" value="{{ old('costo_adquisicion') }}" placeholder="0.00"
                                class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500">
                     </div>

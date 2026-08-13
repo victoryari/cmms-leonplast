@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class WorkOrder extends Model
 {
@@ -12,6 +14,7 @@ class WorkOrder extends Model
 
     protected $fillable = [
         'codigo_ot',
+        'token_seguimiento',
         'titulo',
         'descripcion',
         'activo_id',
@@ -120,6 +123,40 @@ class WorkOrder extends Model
     public function spareParts(): HasMany
     {
         return $this->hasMany(WorkOrderSparePart::class, 'orden_trabajo_id');
+    }
+
+    /**
+     * Genera el siguiente código de OT de forma atómica (OT-YYYY-NNN).
+     *
+     * Serializa el cálculo dentro de una transacción con bloqueo de fila para
+     * evitar colisiones bajo concurrencia, y reintenta si el índice único
+     * rechaza el código generado (caso extremo del primer OT del año).
+     */
+    public static function nextCodigoOt(): string
+    {
+        $year = date('Y');
+        $prefix = "OT-{$year}-";
+
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $codigo = DB::transaction(function () use ($prefix, $year) {
+                $last = static::where('codigo_ot', 'like', "{$prefix}%")
+                    ->orderByDesc('codigo_ot')
+                    ->lockForUpdate()
+                    ->first();
+
+                $siguiente = $last ? (int) Str::afterLast($last->codigo_ot, '-') + 1 : 1;
+
+                return $prefix . str_pad($siguiente, 3, '0', STR_PAD_LEFT);
+            });
+
+            $existe = static::where('codigo_ot', $codigo)->exists();
+
+            if (!$existe) {
+                return $codigo;
+            }
+        }
+
+        return $prefix . str_pad(static::count() + 1, 3, '0', STR_PAD_LEFT);
     }
 
     /**

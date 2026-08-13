@@ -84,12 +84,12 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label for="sueldo_mensual" class="block text-xs font-semibold text-slate-300 mb-1">Sueldo Mensual (S/ o USD)</label>
+                        <label for="sueldo_mensual" class="block text-xs font-semibold text-slate-300 mb-1">Sueldo Mensual (S/.)</label>
                         <div class="relative">
-                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-xs text-slate-400 font-bold">$ / S/</span>
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-xs text-emerald-400 font-bold">S/.</span>
                             <input type="number" step="0.01" min="0" id="sueldo_mensual" name="sueldo_mensual" value="{{ old('sueldo_mensual') }}" placeholder="Ej: 2400.00"
                                    oninput="calcularCostoHora()"
-                                   class="w-full bg-slate-900 border border-slate-800 rounded-xl pl-16 pr-4 py-2.5 text-xs text-white focus:border-emerald-500">
+                                   class="w-full bg-slate-900 border border-slate-800 rounded-xl pl-12 pr-4 py-2.5 text-xs text-white focus:border-emerald-500">
                         </div>
                         <p class="text-[10px] text-slate-400 mt-1">Remuneración mensual asignada al trabajador</p>
                     </div>

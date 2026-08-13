@@ -109,8 +109,8 @@
                 <div>
                     <label for="moneda" class="block text-xs font-semibold text-slate-300 mb-1">Moneda *</label>
                     <select id="moneda" name="moneda" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white">
-                        <option value="USD" selected>USD ($)</option>
-                        <option value="PEN">PEN (S/)</option>
+                        <option value="PEN" selected>PEN (S/.)</option>
+                        <option value="USD">USD ($)</option>
                     </select>
                 </div>
 

@@ -34,4 +34,14 @@ class WorkOrderSparePart extends Model
     {
         return $this->belongsTo(SparePart::class, 'repuesto_id');
     }
+
+    public function getCantidadUsadaAttribute()
+    {
+        return $this->attributes['cantidad'] ?? 0;
+    }
+
+    public function getCostoTotalAttribute()
+    {
+        return $this->attributes['total'] ?? 0.00;
+    }
 }

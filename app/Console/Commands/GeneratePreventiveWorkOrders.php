@@ -32,8 +32,7 @@ class GeneratePreventiveWorkOrders extends Command
         $countGeneradas = 0;
 
         foreach ($planes as $plan) {
-            $otCount = WorkOrder::count() + 1;
-            $codigoOt = 'OT-' . date('Y') . '-' . str_pad($otCount, 3, '0', STR_PAD_LEFT);
+            $codigoOt = WorkOrder::nextCodigoOt();
 
             $ot = WorkOrder::create([
                 'codigo_ot' => $codigoOt,

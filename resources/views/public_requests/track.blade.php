@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Estado de Solicitud - {{ $orden->codigo_ot }}</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="{{ asset('vendor/js/tailwind-cdn.js') }}"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -62,7 +62,7 @@
             </div>
 
             <div class="pt-2">
-                <a href="{{ route('public.create', $orden->equipo?->codigo_activo ?? $orden->activo_id) }}" 
+                <a href="{{ route('public.create', $orden->equipo?->codigo_activo ?? $orden->activo?->codigo_activo) }}" 
                    class="w-full inline-block text-center py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 transition">
                     + Enviar Otro Reporte
                 </a>

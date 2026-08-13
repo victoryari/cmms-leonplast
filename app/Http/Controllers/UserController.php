@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Role;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 
 class UserController extends Controller
 {
@@ -63,7 +64,7 @@ class UserController extends Controller
             'sueldo_mensual' => 'nullable|numeric|min:0',
             'costo_hora' => 'nullable|numeric|min:0',
             'fecha_ingreso' => 'nullable|date',
-            'password' => 'required|string|min:6|confirmed',
+            'password' => ['required', 'confirmed', Password::defaults()],
         ]);
 
         $validated['password_hash'] = Hash::make($validated['password']);
@@ -113,7 +114,7 @@ class UserController extends Controller
         ]);
 
         if ($request->filled('password')) {
-            $request->validate(['password' => 'string|min:6|confirmed']);
+            $request->validate(['password' => ['confirmed', Password::defaults()]]);
             $validated['password_hash'] = Hash::make($request->input('password'));
         }
 
@@ -141,7 +142,7 @@ class UserController extends Controller
     public function resetPassword(Request $request, $id)
     {
         $validated = $request->validate([
-            'password' => 'required|string|min:6|confirmed',
+            'password' => ['required', 'confirmed', Password::defaults()],
         ]);
 
         $usuario = User::findOrFail($id);
