@@ -1,20 +1,12 @@
 <?php
 
-
-// Ensure writable directories for Vercel Serverless environment (/tmp)
-$tmpDirs = [
-    '/tmp/logs',
-    '/tmp/framework/views',
-    '/tmp/framework/sessions',
-    '/tmp/framework/cache',
-    '/tmp/app/public'
-];
-
-foreach ($tmpDirs as $dir) {
-    if (!is_dir($dir)) {
-        @mkdir($dir, 0755, true);
-    }
+try {
+    require __DIR__ . '/../public/index.php';
+} catch (\Throwable $e) {
+    http_response_code(500);
+    header('Content-Type: text/plain');
+    echo "ERROR EN SERVERLESS VERCEL:\n";
+    echo "Mensaje: " . $e->getMessage() . "\n";
+    echo "Archivo: " . $e->getFile() . ":" . $e->getLine() . "\n\n";
+    echo "Trace:\n" . $e->getTraceAsString() . "\n";
 }
-
-// Forward to Laravel's public/index.php
-require __DIR__ . '/../public/index.php';
