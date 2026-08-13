@@ -58,7 +58,7 @@ return [
             'prefix_indexes' => true,
             'strict' => true,
             'engine' => null,
-            'options' => extension_loaded('pdo_mysql') ? array_filter([
+            'options' => (extension_loaded('pdo_mysql') && (env('MYSQL_ATTR_SSL_CA') || env('DB_PORT') == 4000 || env('VERCEL') || isset($_SERVER['VERCEL']))) ? array_filter([
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA') ?: (file_exists('/etc/ssl/certs/ca-certificates.crt') ? '/etc/ssl/certs/ca-certificates.crt' : (file_exists('/etc/pki/tls/certs/ca-bundle.crt') ? '/etc/pki/tls/certs/ca-bundle.crt' : '')),
                 PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => false,
             ], fn ($v) => !is_null($v)) : [],
