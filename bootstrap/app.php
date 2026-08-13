@@ -21,7 +21,15 @@ $app = Application::configure(basePath: dirname(__DIR__))
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->respond(function ($response, \Throwable $e) {
+            return response(
+                "EXCEPCION REAL EN LARAVEL:\n" .
+                "Mensaje: " . $e->getMessage() . "\n" .
+                "Archivo: " . $e->getFile() . ":" . $e->getLine() . "\n\n" .
+                "Trace:\n" . $e->getTraceAsString(),
+                500
+            )->header('Content-Type', 'text/plain');
+        });
     })->create();
 
 if (isset($_ENV['VERCEL']) || isset($_SERVER['VERCEL']) || env('VERCEL') || is_dir('/tmp')) {
