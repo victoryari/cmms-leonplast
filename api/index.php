@@ -1,8 +1,5 @@
 <?php
 
-if (!defined('LARAVEL_START')) {
-    define('LARAVEL_START', microtime(true));
-}
 
 // Ensure writable directories for Vercel Serverless environment (/tmp)
 $tmpDirs = [
