@@ -49,14 +49,16 @@ foreach (['packages.php', 'services.php'] as $file) {
 // SESSION_DRIVER        → array  (en memoria, sin filesystem)
 // ============================================================
 $envOverrides = [
-    'LARAVEL_STORAGE_PATH' => '/tmp',
-    'APP_PACKAGES_CACHE'   => '/tmp/bootstrap/cache/packages.php',
-    'APP_SERVICES_CACHE'   => '/tmp/bootstrap/cache/services.php',
-    'LOG_CHANNEL'          => 'stderr',
-    'LOG_STACK'            => 'stderr',
-    'CACHE_STORE'          => 'array',
-    'SESSION_DRIVER'       => 'array',
-    'QUEUE_CONNECTION'     => 'sync',
+    'LARAVEL_STORAGE_PATH'    => '/tmp',
+    'APP_PACKAGES_CACHE'      => '/tmp/bootstrap/cache/packages.php',
+    'APP_SERVICES_CACHE'      => '/tmp/bootstrap/cache/services.php',
+    'APP_MAINTENANCE_DRIVER'  => 'file',   // evita Manager::createDriver('') en Vercel
+    'APP_MAINTENANCE_STORE'   => 'file',
+    'LOG_CHANNEL'             => 'stderr',
+    'LOG_STACK'               => 'stderr',
+    'CACHE_STORE'             => 'array',
+    'SESSION_DRIVER'          => 'array',
+    'QUEUE_CONNECTION'        => 'sync',
 ];
 foreach ($envOverrides as $key => $value) {
     putenv("$key=$value");
