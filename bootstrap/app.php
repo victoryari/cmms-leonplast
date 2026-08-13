@@ -4,7 +4,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 
-$app = Application::configure(basePath: dirname(__DIR__))
+return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         api: __DIR__.'/../routes/api.php',
@@ -21,32 +21,6 @@ $app = Application::configure(basePath: dirname(__DIR__))
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        $exceptions->respond(function ($response, \Throwable $e) {
-            return response(
-                "EXCEPCION REAL EN LARAVEL:\n" .
-                "Mensaje: " . $e->getMessage() . "\n" .
-                "Archivo: " . $e->getFile() . ":" . $e->getLine() . "\n\n" .
-                "Trace:\n" . $e->getTraceAsString(),
-                500
-            )->header('Content-Type', 'text/plain');
-        });
+        //
     })->create();
 
-if (isset($_ENV['VERCEL']) || isset($_SERVER['VERCEL']) || env('VERCEL') || is_dir('/tmp')) {
-    $app->useStoragePath('/tmp');
-
-    $tmpDirs = [
-        '/tmp/logs',
-        '/tmp/framework/views',
-        '/tmp/framework/sessions',
-        '/tmp/framework/cache',
-        '/tmp/app/public'
-    ];
-    foreach ($tmpDirs as $dir) {
-        if (!is_dir($dir)) {
-            @mkdir($dir, 0755, true);
-        }
-    }
-}
-
-return $app;
