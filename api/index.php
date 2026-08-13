@@ -28,13 +28,22 @@ $_ENV['VIEW_COMPILED_PATH'] = '/tmp/views';
 $_ENV['LOG_CHANNEL'] = 'stderr';
 $_ENV['CACHE_STORE'] = 'array';
 
-// Register autoload
-require __DIR__ . '/../vendor/autoload.php';
+try {
+    // Register autoload
+    require __DIR__ . '/../vendor/autoload.php';
 
-// Bootstrap Laravel and handle request
-$app = require_once __DIR__ . '/../bootstrap/app.php';
+    // Bootstrap Laravel and handle request
+    $app = require_once __DIR__ . '/../bootstrap/app.php';
 
-$app->handleRequest(
-    Illuminate\Http\Request::capture()
-);
+    $app->handleRequest(
+        Illuminate\Http\Request::capture()
+    );
+} catch (\Throwable $e) {
+    http_response_code(500);
+    header('Content-Type: text/plain');
+    echo "ERROR EN SERVERLESS VERCEL:\n";
+    echo "Mensaje: " . $e->getMessage() . "\n";
+    echo "Archivo: " . $e->getFile() . ":" . $e->getLine() . "\n\n";
+    echo "Trace:\n" . $e->getTraceAsString() . "\n";
+}
 
