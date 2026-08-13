@@ -4,7 +4,6 @@
 // PASO 1: Crear directorios en /tmp ANTES de que Laravel arranque
 // El filesystem de Vercel es read-only excepto /tmp
 // ============================================================
-$tmpBootstrap = '/tmp/bootstrap/cache';
 $tmpDirs = [
     '/tmp/bootstrap',
     '/tmp/bootstrap/cache',
@@ -24,15 +23,17 @@ foreach ($tmpDirs as $dir) {
 }
 
 // ============================================================
-// PASO 2: Copiar archivos de cache de bootstrap/cache a /tmp/bootstrap/cache
-// Los archivos se despliegan en /var/task/user/bootstrap/cache/ (read-only)
-// PackageManifest necesita poder escribirlos, por eso los copiamos a /tmp
+// PASO 2: Copiar packages.php y services.php a /tmp/bootstrap/cache
+// Estos archivos se despliegan en read-only; PackageManifest necesita
+// poder escribirlos. Los copiamos a /tmp donde sí puede escribir.
+// NOTA: NO copiamos config.php ni routes.php porque contienen rutas
+// locales de Windows hardcodeadas. Laravel los regenerará con rutas correctas.
 // ============================================================
 $srcCacheDir = __DIR__ . '/../bootstrap/cache';
-$cacheFiles = ['packages.php', 'services.php', 'config.php', 'routes-v7.php', 'events.php'];
-foreach ($cacheFiles as $file) {
+$cacheFilesToCopy = ['packages.php', 'services.php'];
+foreach ($cacheFilesToCopy as $file) {
     $src = $srcCacheDir . '/' . $file;
-    $dst = $tmpBootstrap . '/' . $file;
+    $dst = '/tmp/bootstrap/cache/' . $file;
     if (file_exists($src) && !file_exists($dst)) {
         @copy($src, $dst);
     }
@@ -40,23 +41,25 @@ foreach ($cacheFiles as $file) {
 
 // ============================================================
 // PASO 3: Establecer variables de entorno ANTES del autoloader
+// LARAVEL_STORAGE_PATH es leído nativamente por Laravel >= 11
+// APP_PACKAGES_CACHE y APP_SERVICES_CACHE apuntan a /tmp (writable)
+// LOG_CHANNEL=stderr para no intentar escribir en el filesystem
+// SESSION_DRIVER=array y CACHE_STORE=array para evitar I/O al disco
 // ============================================================
-$vercelEnvOverrides = [
-    'LARAVEL_STORAGE_PATH'  => '/tmp',
-    'APP_BOOTSTRAP_PATH'    => '/tmp/bootstrap',
-    'APP_PACKAGES_CACHE'    => '/tmp/bootstrap/cache/packages.php',
-    'APP_SERVICES_CACHE'    => '/tmp/bootstrap/cache/services.php',
-    'APP_CONFIG_CACHE'      => '/tmp/bootstrap/cache/config.php',
-    'APP_ROUTES_CACHE'      => '/tmp/bootstrap/cache/routes-v7.php',
-    'APP_EVENTS_CACHE'      => '/tmp/bootstrap/cache/events.php',
-    'LOG_CHANNEL'           => 'stderr',
-    'LOG_STACK'             => 'stderr',
-    'CACHE_STORE'           => 'array',
-    'SESSION_DRIVER'        => 'array',
-    'QUEUE_CONNECTION'      => 'sync',
+$envOverrides = [
+    'LARAVEL_STORAGE_PATH' => '/tmp',
+    'APP_PACKAGES_CACHE'   => '/tmp/bootstrap/cache/packages.php',
+    'APP_SERVICES_CACHE'   => '/tmp/bootstrap/cache/services.php',
+    // NO definir APP_CONFIG_CACHE ni APP_ROUTES_CACHE:
+    // Laravel los leerá dinámicamente desde /config/ con storage_path()=/tmp correcto
+    'LOG_CHANNEL'          => 'stderr',
+    'LOG_STACK'            => 'stderr',
+    'CACHE_STORE'          => 'array',
+    'SESSION_DRIVER'       => 'array',
+    'QUEUE_CONNECTION'     => 'sync',
 ];
 
-foreach ($vercelEnvOverrides as $key => $value) {
+foreach ($envOverrides as $key => $value) {
     putenv("$key=$value");
     $_ENV[$key] = $value;
     $_SERVER[$key] = $value;
