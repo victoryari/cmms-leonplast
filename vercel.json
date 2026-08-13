@@ -9,7 +9,20 @@
     },
     "routes": [
         {
-            "handle": "filesystem"
+            "src": "/vendor/(.*)",
+            "dest": "/vendor/$1"
+        },
+        {
+            "src": "/build/(.*)",
+            "dest": "/build/$1"
+        },
+        {
+            "src": "/favicon.ico",
+            "dest": "/favicon.ico"
+        },
+        {
+            "src": "/robots.txt",
+            "dest": "/robots.txt"
         },
         {
             "src": "/(.*)",

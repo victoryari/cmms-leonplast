@@ -5,9 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'CMMS Leon Plast') - Sistema de Mantenimiento Industrial</title>
     
-    <!-- Alpine.js & Tailwind CSS (servidos localmente) -->
-    <script defer src="{{ asset('vendor/js/alpine.min.js') }}"></script>
+    <!-- Alpine.js & Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="{{ asset('vendor/js/tailwind-cdn.js') }}"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="{{ asset('vendor/js/alpine.min.js') }}"></script>
     
     <!-- Google Fonts: Plus Jakarta Sans -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
