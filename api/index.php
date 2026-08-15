@@ -58,14 +58,25 @@ if (file_exists($srcCacheDir . '/packages.php')) {
 
 if (file_exists($srcCacheDir . '/services.php')) {
     $services = @include $srcCacheDir . '/services.php';
-    if (is_array($services) && isset($services['providers']) && is_array($services['providers'])) {
-        $validProviders = [];
-        foreach ($services['providers'] as $provider) {
-            if (class_exists($provider)) {
-                $validProviders[] = $provider;
+    if (is_array($services)) {
+        if (isset($services['providers']) && is_array($services['providers'])) {
+            $validProviders = [];
+            foreach ($services['providers'] as $provider) {
+                if (class_exists($provider)) {
+                    $validProviders[] = $provider;
+                }
             }
+            $services['providers'] = array_values($validProviders);
         }
-        $services['providers'] = $validProviders;
+        if (isset($services['eager']) && is_array($services['eager'])) {
+            $validEager = [];
+            foreach ($services['eager'] as $provider) {
+                if (class_exists($provider)) {
+                    $validEager[] = $provider;
+                }
+            }
+            $services['eager'] = array_values($validEager);
+        }
         @file_put_contents($runtimeCacheDir . '/services.php', '<?php return ' . var_export($services, true) . ';');
     }
 }
