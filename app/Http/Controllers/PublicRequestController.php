@@ -46,14 +46,15 @@ class PublicRequestController extends Controller
             'nombre_solicitante' => 'required|string|max:150',
             'area_turno' => 'required|string|max:150',
             'contacto' => 'nullable|string|max:100',
-            'prioridad' => 'required|in:Baja,Media,Alta,Critica',
+            'prioridad' => 'required|in:Baja,Media,Alta,Critica,Crítica',
             'descripcion' => 'required|string|min:10',
             'foto' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:10240', // Max 10MB
         ]);
 
+        $prioridadNormalized = strtolower($validated['prioridad']) === 'critica' ? 'Crítica' : $validated['prioridad'];
         $codigoOt = WorkOrder::nextCodigoOt();
 
-        $esEmergencia = in_array($validated['prioridad'], ['Alta', 'Critica']);
+        $esEmergencia = in_array($prioridadNormalized, ['Alta', 'Crítica', 'Critica']);
 
         $orden = WorkOrder::create([
             'codigo_ot' => $codigoOt,
@@ -61,7 +62,7 @@ class PublicRequestController extends Controller
             'activo_id' => $activo->id,
             'solicitante_id' => auth()->id() ?? null,
             'tipo_ot' => $esEmergencia ? 'Urgente' : 'Correctivo',
-            'prioridad' => $validated['prioridad'],
+            'prioridad' => $prioridadNormalized,
             'estado' => 'Pendiente',
             'titulo' => "Reporte de Avería QR: " . Str::limit($validated['descripcion'], 40),
             'descripcion' => "Solicitante en Planta: {$validated['nombre_solicitante']} ({$validated['area_turno']})\n" .

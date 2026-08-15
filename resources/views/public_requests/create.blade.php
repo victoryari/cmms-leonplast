@@ -63,7 +63,7 @@
                     <select name="prioridad" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:outline-none">
                         <option value="Media" selected>🟡 Media (Permite seguir operando)</option>
                         <option value="Alta">🟧 Alta (Rendimiento afectado / Fuga)</option>
-                        <option value="Critica">🚨 Crítica (PARADA DE PLANTA / MÁQUINA DETENIDA)</option>
+                        <option value="Crítica">🚨 Crítica (PARADA DE PLANTA / MÁQUINA DETENIDA)</option>
                         <option value="Baja">🟢 Baja (Ruidos menores / Ajuste)</option>
                     </select>
                 </div>
