@@ -23,15 +23,50 @@ foreach ($tmpDirs as $dir) {
 }
 
 // ============================================================
-// PASO 2: Copiar bootstrap/cache/*.php generados en build a /tmp
+// PASO 2: Cargar Composer Autoloader y filtrar proveedores inexistentes en produccion
 // ============================================================
+if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
+    require_once __DIR__ . '/../vendor/autoload.php';
+}
+
 $srcCacheDir = __DIR__ . '/../bootstrap/cache';
 $runtimeCacheDir = '/tmp/bootstrap/cache';
-foreach (['packages.php', 'services.php'] as $file) {
-    $src = $srcCacheDir . '/' . $file;
-    $dst = $runtimeCacheDir . '/' . $file;
-    if (file_exists($src) && !file_exists($dst)) {
-        @copy($src, $dst);
+
+if (file_exists($srcCacheDir . '/packages.php')) {
+    $packages = @include $srcCacheDir . '/packages.php';
+    if (is_array($packages)) {
+        $validPackages = [];
+        foreach ($packages as $pkgName => $pkgData) {
+            if (isset($pkgData['providers']) && is_array($pkgData['providers'])) {
+                $validProviders = [];
+                foreach ($pkgData['providers'] as $provider) {
+                    if (class_exists($provider)) {
+                        $validProviders[] = $provider;
+                    }
+                }
+                if (!empty($validProviders)) {
+                    $pkgData['providers'] = $validProviders;
+                    $validPackages[$pkgName] = $pkgData;
+                }
+            } else {
+                $validPackages[$pkgName] = $pkgData;
+            }
+        }
+        @file_put_contents($runtimeCacheDir . '/packages.php', '<?php return ' . var_export($validPackages, true) . ';');
+    }
+}
+
+if (file_exists($srcCacheDir . '/services.php')) {
+    $services = @include $srcCacheDir . '/services.php';
+    if (is_array($services) && isset($services['providers']) && is_array($services['providers'])) {
+        $validProviders = [];
+        foreach ($services['providers'] as $provider) {
+            if (class_exists($provider)) {
+                $validProviders[] = $provider;
+            }
+        }
+        $services['providers'] = $validProviders;
+        @file_put_contents($runtimeCacheDir . '/services.php', '<?php return ' . var_export($services, true) . ';');
     }
 }
 
