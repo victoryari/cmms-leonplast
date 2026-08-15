@@ -198,18 +198,18 @@ class SecurityAuditTest extends TestCase
 
     public function test_requester_cannot_modify_another_requesters_work_order(): void
     {
-        $solicitante = $this->obtenerOCrearRol('Solicitante', [
-            'ordenes' => ['ver' => true, 'crear' => true],
+        $rolBasico = $this->obtenerOCrearRol('Usuario_Lectura', [
+            'ordenes' => ['ver' => true, 'crear' => false, 'ejecutar' => false],
             'activos' => ['ver' => true],
         ]);
 
-        $userA = $this->crearUsuario($solicitante);
-        $userB = $this->crearUsuario($solicitante);
+        $userA = $this->crearUsuario($rolBasico);
+        $userB = $this->crearUsuario($rolBasico);
         $activo = $this->crearActivo();
 
         $ot = WorkOrder::create([
             'codigo_ot' => 'OT-' . date('Y') . '-' . str_pad(uniqid(), 4, '0', STR_PAD_LEFT),
-            'titulo' => 'OT del solicitante A',
+            'titulo' => 'OT de prueba usuario A',
             'descripcion' => 'Descripción de prueba',
             'activo_id' => $activo->id,
             'solicitante_id' => $userA->id,

@@ -40,6 +40,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/perfil', [ProfileController::class, 'update'])->name('perfil.update');
 
     Route::get('/notificaciones', [NotificationController::class, 'index'])->name('notificaciones.index');
+    Route::get('/notificaciones/check-unread', [NotificationController::class, 'checkUnread'])->name('notificaciones.check-unread');
     Route::get('/notificaciones/{id}/marcar-leida', [NotificationController::class, 'markAsRead'])->name('notificaciones.marcar-leida');
     Route::post('/notificaciones/marcar-todas', [NotificationController::class, 'markAllAsRead'])->name('notificaciones.marcar-todas');
 

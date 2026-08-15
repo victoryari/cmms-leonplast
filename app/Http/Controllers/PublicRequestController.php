@@ -51,11 +51,6 @@ class PublicRequestController extends Controller
             'foto' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:10240', // Max 10MB
         ]);
 
-        // Asignar al usuario solicitante por defecto de sistema
-        $solicitanteDefault = User::whereHas('role', fn($q) => $q->where('nombre', 'Solicitante'))->first() 
-            ?? User::first();
-
-        $year = date('Y');
         $codigoOt = WorkOrder::nextCodigoOt();
 
         $esEmergencia = in_array($validated['prioridad'], ['Alta', 'Critica']);
@@ -64,7 +59,7 @@ class PublicRequestController extends Controller
             'codigo_ot' => $codigoOt,
             'token_seguimiento' => Str::random(40),
             'activo_id' => $activo->id,
-            'solicitante_id' => $solicitanteDefault->id,
+            'solicitante_id' => auth()->id() ?? null,
             'tipo_ot' => $esEmergencia ? 'Urgente' : 'Correctivo',
             'prioridad' => $validated['prioridad'],
             'estado' => 'Pendiente',
@@ -79,14 +74,16 @@ class PublicRequestController extends Controller
         // Guardar foto del fallo si el operario la capturó con su celular
         if ($request->hasFile('foto')) {
             $path = $request->file('foto')->store('fotos_ots', 'public');
-            $fotosArray = $orden->fotos ?? [];
-            $fotosArray[] = [
-                'url_foto' => "/storage/" . $path,
-                'tipo' => 'Antes',
-                'subido_por' => $validated['nombre_solicitante'],
-                'fecha' => now()->toIso8601String(),
-            ];
-            $orden->update(['fotos' => $fotosArray]);
+            $publicUrl = "/storage/" . $path;
+            $fotos = $orden->fotos ?? ['antes' => [], 'despues' => []];
+            if (!isset($fotos['antes']) || !is_array($fotos['antes'])) {
+                $fotos['antes'] = [];
+            }
+            if (!isset($fotos['despues']) || !is_array($fotos['despues'])) {
+                $fotos['despues'] = [];
+            }
+            $fotos['antes'][] = $publicUrl;
+            $orden->update(['fotos' => $fotos]);
         }
 
         // Notificar inmediatamente a los supervisores sobre la avería reportada

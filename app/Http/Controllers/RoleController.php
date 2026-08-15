@@ -105,7 +105,7 @@ class RoleController extends Controller
             return back()->with('error', "No se puede eliminar el rol {$role->nombre} porque tiene usuarios activos asignados.");
         }
 
-        if (in_array($role->nombre, ['Administrador', 'Gerente_Mantenimiento', 'Supervisor', 'Tecnico', 'Solicitante'])) {
+        if (in_array($role->nombre, ['Administrador', 'Gerente_Mantenimiento', 'Supervisor', 'Tecnico'])) {
             return back()->with('error', "El rol del sistema '{$role->nombre}' no puede ser eliminado por seguridad.");
         }
 

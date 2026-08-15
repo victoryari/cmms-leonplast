@@ -9,7 +9,7 @@
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
             <h2 class="text-2xl font-extrabold text-white tracking-tight">Gestión de Personal & Permisos Granulares</h2>
-            <p class="text-xs text-slate-400 mt-1">Administración de roles (Administrador, Gerente, Supervisor, Técnico, Solicitante) y control de acceso</p>
+            <p class="text-xs text-slate-400 mt-1">Administración de roles (Administrador, Gerente, Supervisor, Técnico) y control de acceso</p>
         </div>
 
         <div class="flex items-center space-x-2">

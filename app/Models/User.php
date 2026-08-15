@@ -155,7 +155,7 @@ class User extends Authenticatable
 
     public function isRequester(): bool
     {
-        return $this->hasRole('Solicitante');
+        return false;
     }
 
     public function ordenesSolicitadas(): HasMany

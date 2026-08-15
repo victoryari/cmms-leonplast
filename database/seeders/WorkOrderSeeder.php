@@ -17,7 +17,7 @@ class WorkOrderSeeder extends Seeder
         $piovan = Asset::where('codigo_activo', 'ACT-CHL-001')->first();
         $marley = Asset::where('codigo_activo', 'ACT-TRE-001')->first();
 
-        $solicitante = User::where('email', 'solicitante@leonplast.com')->first();
+        $solicitante = User::where('email', 'admin@leonplast.com')->first();
         $tecnico = User::where('email', 'tecnico@leonplast.com')->first();
         $supervisor = User::where('email', 'supervisor@leonplast.com')->first();
 
@@ -27,7 +27,7 @@ class WorkOrderSeeder extends Seeder
                 'titulo' => 'Fuga de aceite hidráulico en manguera principal de Inyectora Engel 250T',
                 'descripcion' => 'Se detectó pérdida constante de fluido hidráulico en la zona de cierre del molde durante el turno de noche.',
                 'activo_id' => $engel?->id ?? 1,
-                'solicitante_id' => $solicitante?->id ?? 5,
+                'solicitante_id' => null,
                 'tecnico_id' => $tecnico?->id ?? 4,
                 'supervisor_id' => $supervisor?->id ?? 3,
                 'tipo_ot' => 'Correctivo',

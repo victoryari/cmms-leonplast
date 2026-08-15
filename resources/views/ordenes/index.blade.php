@@ -122,7 +122,7 @@
                         </td>
 
                         <td class="py-4 px-6">
-                            <span class="text-slate-200 font-medium block">{{ $ot->solicitante?->nombre_completo ?? 'N/A' }}</span>
+                            <span class="text-slate-200 font-medium block">{{ $ot->solicitante?->nombre_completo ?? '📱 Reporte QR (Planta)' }}</span>
                             <span class="text-[10px] text-slate-500">{{ $ot->fecha_solicitud?->diffForHumans() }}</span>
                         </td>
 

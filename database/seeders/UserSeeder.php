@@ -64,19 +64,6 @@ class UserSeeder extends Seeder
                 'activo' => true,
                 'fecha_ingreso' => '2024-04-05',
             ],
-            [
-                'rol_id' => 5, // Solicitante
-                'nombres' => 'María',
-                'apellidos' => 'Alva Cárdenas',
-                'documento_identidad' => '48901234',
-                'telefono' => '+51 954321098',
-                'email' => 'solicitante@leonplast.com',
-                'codigo_empleado' => 'EMP-005',
-                'especialidad' => 'Operaciones de Planta y Producción',
-                'password_hash' => Hash::make(Str::password(16)),
-                'activo' => true,
-                'fecha_ingreso' => '2024-05-12',
-            ],
         ];
 
         foreach ($users as $userData) {

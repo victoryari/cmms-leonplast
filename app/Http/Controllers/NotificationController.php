@@ -34,4 +34,20 @@ class NotificationController extends Controller
 
         return back()->with('success', 'Todas las notificaciones han sido marcadas como leídas.');
     }
+
+    public function checkUnread(Request $request)
+    {
+        $usuarioId = $request->user()->id;
+        $unreadCount = Notification::where('usuario_id', $usuarioId)->where('leido', false)->count();
+        $latest = Notification::where('usuario_id', $usuarioId)
+            ->where('leido', false)
+            ->orderBy('id', 'desc')
+            ->take(5)
+            ->get();
+
+        return response()->json([
+            'unread_count' => $unreadCount,
+            'latest' => $latest
+        ]);
+    }
 }

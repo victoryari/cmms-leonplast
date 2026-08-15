@@ -341,8 +341,8 @@
                 <div class="space-y-3">
                     <div class="p-3 rounded-2xl bg-slate-950 border border-slate-800">
                         <span class="text-[10px] text-slate-500 uppercase font-semibold block">Solicitado por:</span>
-                        <strong class="text-white font-medium text-xs">{{ $ot->solicitante?->nombre_completo ?? 'N/A' }}</strong>
-                        <p class="text-[10px] text-slate-400">{{ $ot->solicitante?->email }}</p>
+                        <strong class="text-white font-medium text-xs">{{ $ot->solicitante?->nombre_completo ?? '📱 Reporte QR (Planta)' }}</strong>
+                        <p class="text-[10px] text-slate-400">{{ $ot->solicitante?->email ?? 'Operario / Personal de Planta' }}</p>
                     </div>
 
                     <div class="p-3 rounded-2xl bg-slate-950 border border-slate-800">

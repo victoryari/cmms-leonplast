@@ -231,9 +231,135 @@
                 <p>Sistema CMMS Leon Plast S.A.C. &copy; {{ date('Y') }} - Gestión de Mantenimiento Industrial</p>
                 <p class="font-mono text-[11px]">v2.5 Enterprise</p>
             </footer>
-        </div>
+    <!-- Toast Notification Container for Real-time Alerts -->
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col space-y-3 max-w-sm w-full pointer-events-none"></div>
 
-    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            let knownNotifIds = new Set();
+            let isFirstCheck = true;
 
+            function playNotificationSound() {
+                try {
+                    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                    if (!AudioContextClass) return;
+                    const ctx = new AudioContextClass();
+                    if (ctx.state === 'suspended') {
+                        ctx.resume();
+                    }
+
+                    // Tono 1: A5 (880 Hz)
+                    const osc1 = ctx.createOscillator();
+                    const gain1 = ctx.createGain();
+                    osc1.type = 'sine';
+                    osc1.frequency.setValueAtTime(880, ctx.currentTime);
+                    gain1.gain.setValueAtTime(0.4, ctx.currentTime);
+                    gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+                    osc1.connect(gain1);
+                    gain1.connect(ctx.destination);
+                    osc1.start(ctx.currentTime);
+                    osc1.stop(ctx.currentTime + 0.25);
+
+                    // Tono 2: E6 (1320 Hz)
+                    const osc2 = ctx.createOscillator();
+                    const gain2 = ctx.createGain();
+                    osc2.type = 'sine';
+                    osc2.frequency.setValueAtTime(1320, ctx.currentTime + 0.15);
+                    gain2.gain.setValueAtTime(0.5, ctx.currentTime + 0.15);
+                    gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.55);
+                    osc2.connect(gain2);
+                    gain2.connect(ctx.destination);
+                    osc2.start(ctx.currentTime + 0.15);
+                    osc2.stop(ctx.currentTime + 0.55);
+                } catch (e) {
+                    console.warn('AudioContext alert error:', e);
+                }
+            }
+
+            function showNotificationToast(notif) {
+                const container = document.getElementById('toast-container');
+                if (!container) return;
+
+                const toast = document.createElement('div');
+                toast.className = 'pointer-events-auto bg-slate-900/95 border-2 border-rose-500/80 text-white p-4 rounded-2xl shadow-2xl backdrop-blur-xl flex items-start space-x-3 transition-all duration-300 transform translate-x-full opacity-0 animate-bounce-once';
+                toast.innerHTML = `
+                    <div class="w-10 h-10 rounded-xl bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center justify-center shrink-0 font-bold text-lg">
+                        ⚠️
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h4 class="text-xs font-bold text-white truncate">${notif.titulo}</h4>
+                        <p class="text-[11px] text-slate-300 mt-0.5 line-clamp-2">${notif.mensaje}</p>
+                        <a href="${notif.url_accion || '#'}" class="inline-block mt-2 text-[10px] font-bold text-blue-400 hover:text-blue-300 uppercase tracking-wider">Ver Detalle →</a>
+                    </div>
+                    <button type="button" onclick="this.parentElement.remove()" class="text-slate-500 hover:text-white text-xs">✕</button>
+                `;
+
+                container.appendChild(toast);
+                setTimeout(() => {
+                    toast.classList.remove('translate-x-full', 'opacity-0');
+                }, 10);
+
+                setTimeout(() => {
+                    if (toast.parentElement) {
+                        toast.classList.add('translate-x-full', 'opacity-0');
+                        setTimeout(() => toast.remove(), 300);
+                    }
+                }, 8000);
+            }
+
+            function updateBadge(count) {
+                const bellLink = document.querySelector('a[title="Centro de Notificaciones"]');
+                if (!bellLink) return;
+
+                let badge = bellLink.querySelector('span.absolute');
+                if (count > 0) {
+                    if (!badge) {
+                        badge = document.createElement('span');
+                        badge.className = 'absolute -top-1 -right-1 w-5 h-5 rounded-full bg-rose-500 text-white text-[10px] font-extrabold flex items-center justify-center border-2 border-slate-900 animate-pulse';
+                        bellLink.appendChild(badge);
+                    }
+                    badge.textContent = count > 9 ? '9+' : count;
+                } else if (badge) {
+                    badge.remove();
+                }
+            }
+
+            function checkNotifications() {
+                fetch('{{ route("notificaciones.check-unread") }}', {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(res => res.json())
+                .then(data => {
+                    updateBadge(data.unread_count || 0);
+
+                    if (data.latest && data.latest.length > 0) {
+                        let hasNewAlert = false;
+                        data.latest.forEach(notif => {
+                            if (!knownNotifIds.has(notif.id)) {
+                                knownNotifIds.add(notif.id);
+                                if (!isFirstCheck) {
+                                    hasNewAlert = true;
+                                    showNotificationToast(notif);
+                                }
+                            }
+                        });
+
+                        if (hasNewAlert) {
+                            playNotificationSound();
+                        }
+                    }
+                    isFirstCheck = false;
+                })
+                .catch(err => console.debug('Notif check silent error:', err));
+            }
+
+            // Realizar primer chequeo inmediato y luego cada 8 segundos
+            checkNotifications();
+            setInterval(checkNotifications, 8000);
+        });
+    </script>
 </body>
 </html>
