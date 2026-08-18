@@ -20,7 +20,7 @@ class AssetController extends Controller
 
     public function index(Request $request)
     {
-        $query = Asset::with(['parent', 'proveedor'])->where('activo', true);
+        $query = Asset::with(['parent', 'proveedor', 'location'])->where('activo', true);
 
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
@@ -64,8 +64,9 @@ class AssetController extends Controller
         $categorias = $this->catalogService->getCategoriasActivos();
         $areas = $this->catalogService->getAreasPlanta();
         $estadosOperativos = $this->catalogService->getEstadosOperativos();
+        $ubicacionesCat = \App\Models\Location::where('activo', true)->orderBy('nombre', 'asc')->get();
 
-        return view('activos.index', compact('activos', 'arbolActivos', 'metrics', 'categorias', 'areas', 'estadosOperativos'));
+        return view('activos.index', compact('activos', 'arbolActivos', 'metrics', 'categorias', 'areas', 'estadosOperativos', 'ubicacionesCat'));
     }
 
     public function create()
@@ -73,8 +74,9 @@ class AssetController extends Controller
         $catalogos = $this->catalogService->getAllCatalogs();
         $activosPadres = Asset::where('activo', true)->orderBy('nombre', 'asc')->get();
         $proveedores = \App\Models\Supplier::where('activo', true)->orderBy('razon_social', 'asc')->get();
+        $ubicaciones = \App\Models\Location::where('activo', true)->orderBy('nombre', 'asc')->get();
 
-        return view('activos.create', compact('catalogos', 'activosPadres', 'proveedores'));
+        return view('activos.create', compact('catalogos', 'activosPadres', 'proveedores', 'ubicaciones'));
     }
 
     public function store(Request $request)
@@ -84,6 +86,7 @@ class AssetController extends Controller
             'categoria' => 'required|string|max:100',
             'tipo_clasificacion' => 'required|in:Ubicacion,Equipo,Herramienta,Repuesto_Suministro,Digital',
             'parent_id' => 'nullable|exists:activos,id',
+            'ubicacion_id' => 'nullable|exists:ubicaciones,id',
             'proveedor_id' => 'nullable|exists:terceros,id',
             'marca' => 'nullable|string|max:100',
             'modelo' => 'nullable|string|max:100',
@@ -98,6 +101,13 @@ class AssetController extends Controller
             'descripcion' => 'nullable|string',
             'imagen' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
+
+        if (!empty($validated['ubicacion_id'])) {
+            $loc = \App\Models\Location::find($validated['ubicacion_id']);
+            if ($loc) {
+                $validated['ubicacion'] = $loc->nombre;
+            }
+        }
 
         if ($request->hasFile('imagen')) {
             $path = $request->file('imagen')->store('activos', 'public');
@@ -125,6 +135,7 @@ class AssetController extends Controller
         $activo = Asset::with([
             'parent',
             'children',
+            'location',
             'proveedor',
             'ordenesTrabajo' => fn($q) => $q->orderBy('created_at', 'desc')->take(10),
             'planesPreventivos',
@@ -139,8 +150,9 @@ class AssetController extends Controller
         $catalogos = $this->catalogService->getAllCatalogs();
         $activosPadres = Asset::where('activo', true)->where('id', '!=', $activo->id)->orderBy('nombre', 'asc')->get();
         $proveedores = \App\Models\Supplier::where('activo', true)->orderBy('razon_social', 'asc')->get();
+        $ubicaciones = \App\Models\Location::where('activo', true)->orderBy('nombre', 'asc')->get();
 
-        return view('activos.edit', compact('activo', 'catalogos', 'activosPadres', 'proveedores'));
+        return view('activos.edit', compact('activo', 'catalogos', 'activosPadres', 'proveedores', 'ubicaciones'));
     }
 
     public function update(Request $request, $id)
@@ -152,6 +164,7 @@ class AssetController extends Controller
             'categoria' => 'required|string|max:100',
             'tipo_clasificacion' => 'required|in:Ubicacion,Equipo,Herramienta,Repuesto_Suministro,Digital',
             'parent_id' => 'nullable|exists:activos,id',
+            'ubicacion_id' => 'nullable|exists:ubicaciones,id',
             'proveedor_id' => 'nullable|exists:terceros,id',
             'marca' => 'nullable|string|max:100',
             'modelo' => 'nullable|string|max:100',
@@ -167,6 +180,13 @@ class AssetController extends Controller
             'imagen' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
             'eliminar_imagen' => 'nullable|boolean',
         ]);
+
+        if (!empty($validated['ubicacion_id'])) {
+            $loc = \App\Models\Location::find($validated['ubicacion_id']);
+            if ($loc) {
+                $validated['ubicacion'] = $loc->nombre;
+            }
+        }
 
         if ($request->boolean('eliminar_imagen')) {
             $validated['imagenes'] = null;

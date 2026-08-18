@@ -25,6 +25,7 @@ class AssetSeeder extends Seeder
                     'Presión Máxima' => '180 bar',
                     'Potencia Motor' => '45 kW',
                 ],
+                'ubicacion_id' => 1,
                 'ubicacion' => 'Nave A - Inyección Principal',
                 'area' => 'Producción Inyección',
                 'estado_operativo' => 'Operativo',

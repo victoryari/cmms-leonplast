@@ -122,12 +122,19 @@
                                 <span class="text-mono text-slate-300 font-medium">{{ $activo->numero_serie ?? 'N/A' }}</span>
                             </div>
                             <div>
-                                <span class="text-slate-500 block font-semibold text-[10px] uppercase">Ubicación en Planta</span>
-                                <span class="text-white font-medium">{{ $activo->ubicacion ?? 'Nave Principal' }}</span>
+                                <span class="text-slate-500 block font-semibold text-[10px] uppercase">Sede / Ubicación Oficial</span>
+                                <span class="text-cyan-400 font-bold block truncate">
+                                    @if($activo->location)
+                                        📍 {{ $activo->location->nombre }} 
+                                        <span class="text-[10px] text-slate-400 font-normal">({{ $activo->location->codigo_ubicacion }})</span>
+                                    @else
+                                        {{ $activo->ubicacion ?? 'Planta Industrial Ate (Sede Principal)' }}
+                                    @endif
+                                </span>
                             </div>
                             <div>
-                                <span class="text-slate-500 block font-semibold text-[10px] uppercase">Área Operativa</span>
-                                <span class="text-white font-medium">{{ $activo->area ?? 'Producción' }}</span>
+                                <span class="text-slate-500 block font-semibold text-[10px] uppercase">Área Operativa / Nave</span>
+                                <span class="text-white font-medium">{{ $activo->area ?? 'Producción Inyección' }}</span>
                             </div>
                         </div>
                     </div>

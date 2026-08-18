@@ -137,7 +137,20 @@
                     </div>
 
                     <div>
-                        <label for="area" class="block text-xs font-semibold text-slate-300 mb-1">Área de Planta *</label>
+                        <label for="ubicacion_id" class="block text-xs font-semibold text-slate-300 mb-1">Sede / Ubicación Oficial (Catálogo Ubicaciones) *</label>
+                        <select id="ubicacion_id" name="ubicacion_id" required 
+                                class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-cyan-400 font-bold focus:outline-none focus:border-blue-500">
+                            <option value="">Seleccione Sede / Ubicación Oficial</option>
+                            @foreach($ubicaciones ?? [] as $ub)
+                            <option value="{{ $ub->id }}" {{ (old('ubicacion_id') == $ub->id || $loop->first) ? 'selected' : '' }}>
+                                📍 {{ $ub->nombre }} ({{ $ub->codigo_ubicacion }}) - {{ str_replace('_', ' ', $ub->tipo) }}
+                            </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="area" class="block text-xs font-semibold text-slate-300 mb-1">Área / Zona de Planta *</label>
                         <select id="area" name="area" 
                                 class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500">
                             @foreach($catalogos['areas_planta'] as $areaItem)
@@ -147,7 +160,7 @@
                     </div>
 
                     <div>
-                        <label for="ubicacion" class="block text-xs font-semibold text-slate-300 mb-1">Ubicación Específica</label>
+                        <label for="ubicacion" class="block text-xs font-semibold text-slate-300 mb-1">Sub-Ubicación / Posición en Nave</label>
                         <input type="text" id="ubicacion" name="ubicacion" value="{{ old('ubicacion') }}" placeholder="Ej: Nave A - Línea 1"
                                class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500">
                     </div>

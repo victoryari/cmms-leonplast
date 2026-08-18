@@ -54,7 +54,7 @@ class Location extends Model
 
     public function activos(): HasMany
     {
-        return $this->hasMany(Asset::class, 'ubicacion', 'nombre');
+        return $this->hasMany(Asset::class, 'ubicacion_id');
     }
 
     public function getTipoLabelAttribute(): string

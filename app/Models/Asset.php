@@ -12,6 +12,7 @@ class Asset extends Model
 
     protected $fillable = [
         'parent_id',
+        'ubicacion_id',
         'codigo_activo',
         'nombre',
         'descripcion',
@@ -131,5 +132,20 @@ class Asset extends Model
     public function proveedor(): BelongsTo
     {
         return $this->belongsTo(Supplier::class, 'proveedor_id');
+    }
+
+    public function location(): BelongsTo
+    {
+        return $this->belongsTo(Location::class, 'ubicacion_id');
+    }
+
+    public function ubicacionRelacion(): BelongsTo
+    {
+        return $this->belongsTo(Location::class, 'ubicacion_id');
+    }
+
+    public function getNombreUbicacionAttribute(): string
+    {
+        return $this->location?->nombre ?? $this->ubicacion ?? 'Nave Principal (Ate)';
     }
 }
