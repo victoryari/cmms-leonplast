@@ -23,5 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->render(function (\Illuminate\Session\TokenMismatchException $e, $request) {
+            return redirect()->route('login')->withErrors(['session' => 'Tu sesión de navegación expiró por inactividad. Por favor, ingresa tu correo y contraseña nuevamente.']);
+        });
     })->create();
