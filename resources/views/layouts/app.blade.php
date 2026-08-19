@@ -21,27 +21,39 @@
         [x-cloak] { display: none !important; }
     </style>
 </head>
-<body class="h-full text-slate-100 bg-slate-950 antialiased selection:bg-blue-500 selection:text-white">
+<body class="h-full text-slate-100 bg-slate-950 antialiased selection:bg-blue-500 selection:text-white" x-data="{ sidebarOpen: false }">
 
-    <div class="min-h-screen flex flex-col md:flex-row">
+    <div class="min-h-screen flex flex-col md:flex-row relative">
 
-        <!-- Sidebar Navigation -->
-        <aside class="w-full md:w-64 md:h-screen md:sticky md:top-0 bg-slate-900 border-r border-slate-800 flex flex-col justify-between shrink-0 overflow-y-auto scrollbar-thin">
+        <!-- Mobile Menu Backdrop Overlay -->
+        <div x-show="sidebarOpen" x-cloak 
+             @click="sidebarOpen = false" 
+             class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-40 md:hidden transition-opacity"></div>
+
+        <!-- Sidebar Navigation Drawer -->
+        <aside class="fixed inset-y-0 left-0 z-50 w-72 bg-slate-900 border-r border-slate-800 flex flex-col justify-between transform transition-transform duration-300 ease-in-out md:translate-x-0 md:static md:w-64 md:h-screen md:sticky md:top-0 shrink-0 overflow-y-auto scrollbar-thin"
+               :class="sidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full md:translate-x-0'">
             <div>
                 <!-- Brand Logo & Header -->
-                <div class="h-20 flex items-center px-6 border-b border-slate-800 space-x-3">
-                    <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 shadow-lg shadow-blue-500/30 flex items-center justify-center font-black text-white text-lg tracking-wider">
-                        LP
+                <div class="h-20 flex items-center justify-between px-6 border-b border-slate-800">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 shadow-lg shadow-blue-500/30 flex items-center justify-center font-black text-white text-lg tracking-wider shrink-0">
+                            LP
+                        </div>
+                        <div>
+                            <h1 class="font-extrabold text-sm tracking-tight text-white">LEON PLAST</h1>
+                            <p class="text-[10px] text-blue-400 font-semibold tracking-widest uppercase">CMMS Industrial</p>
+                        </div>
                     </div>
-                    <div>
-                        <h1 class="font-extrabold text-sm tracking-tight text-white">LEON PLAST</h1>
-                        <p class="text-[10px] text-blue-400 font-semibold tracking-widest uppercase">CMMS Industrial</p>
-                    </div>
+                    <!-- Close button on mobile drawer -->
+                    <button type="button" @click="sidebarOpen = false" class="md:hidden text-slate-400 hover:text-white p-1 focus:outline-none">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
                 </div>
 
                 <!-- Navigation Links -->
                 <nav class="p-4 space-y-1.5">
-                    <a href="{{ route('dashboard') }}" 
+                    <a href="{{ route('dashboard') }}" @click="sidebarOpen = false"
                        class="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 {{ request()->routeIs('dashboard') ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100' }}">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
                         <span>Dashboard</span>
@@ -56,7 +68,7 @@
                     </div>
 
                     @if(auth()->user()->hasPermission('activos', 'ver'))
-                    <a href="{{ route('activos.index') }}" 
+                    <a href="{{ route('activos.index') }}" @click="sidebarOpen = false"
                        class="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 {{ request()->routeIs('activos.*') ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100' }}">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
                         <span>Activos Industriales</span>
@@ -64,7 +76,7 @@
                     @endif
 
                     @if(auth()->user()->hasPermission('usuarios_roles', 'ver'))
-                    <a href="{{ route('usuarios.index') }}" 
+                    <a href="{{ route('usuarios.index') }}" @click="sidebarOpen = false"
                        class="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 {{ request()->routeIs('usuarios.*') || request()->routeIs('roles.*') ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100' }}">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
                         <span>Recursos Humanos</span>
@@ -72,7 +84,7 @@
                     @endif
 
                     @if(auth()->user()->isAdmin() || auth()->user()->isManager() || auth()->user()->isSupervisor())
-                    <a href="{{ route('terceros.index') }}" 
+                    <a href="{{ route('terceros.index') }}" @click="sidebarOpen = false"
                        class="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 {{ request()->routeIs('terceros.*') ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100' }}">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5m3 0h1m-1-4h.01M9 16h.01M9 12h.01M9 8h.01M15 16h.01M15 12h.01M15 8h.01"></path></svg>
                         <span>Terceros (Proveedores)</span>
@@ -88,7 +100,7 @@
                     </div>
 
                     @if(auth()->user()->hasPermission('ordenes', 'ver'))
-                    <a href="{{ route('ordenes.index') }}" 
+                    <a href="{{ route('ordenes.index') }}" @click="sidebarOpen = false"
                        class="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 {{ request()->routeIs('ordenes.*') ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100' }}">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
                         <span>Órdenes de Trabajo</span>
@@ -96,7 +108,7 @@
                     @endif
 
                     @if(auth()->user()->hasPermission('planes', 'ver'))
-                    <a href="{{ route('planes.index') }}" 
+                    <a href="{{ route('planes.index') }}" @click="sidebarOpen = false"
                        class="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 {{ request()->routeIs('planes.*') ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100' }}">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                         <span>Planes Preventivos</span>
@@ -104,7 +116,7 @@
                     @endif
 
                     @if(auth()->user()->hasPermission('repuestos', 'ver'))
-                    <a href="{{ route('repuestos.index') }}" 
+                    <a href="{{ route('repuestos.index') }}" @click="sidebarOpen = false"
                        class="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 {{ request()->routeIs('repuestos.*') ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100' }}">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
                         <span>Inventario & Almacén</span>
@@ -112,7 +124,7 @@
                     @endif
 
                     @if(auth()->user()->hasPermission('reportes', 'ver'))
-                    <a href="{{ route('reportes.index') }}" 
+                    <a href="{{ route('reportes.index') }}" @click="sidebarOpen = false"
                        class="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 {{ request()->routeIs('reportes.*') ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100' }}">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
                         <span>Reportes KPI & Analítica</span>
@@ -120,7 +132,7 @@
                     @endif
 
                     @if(auth()->user()->isAdmin() || auth()->user()->isManager())
-                    <a href="{{ route('configuracion.index') }}" 
+                    <a href="{{ route('configuracion.index') }}" @click="sidebarOpen = false"
                        class="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 {{ request()->routeIs('configuracion.*') ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100' }}">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                         <span>Configuración & Catálogos</span>
@@ -145,7 +157,7 @@
 
             <!-- Profile & Logout Section Footer -->
             <div class="p-4 border-t border-slate-800 bg-slate-900/80 space-y-2">
-                <a href="{{ route('perfil.index') }}" class="flex items-center justify-between p-2 rounded-xl hover:bg-slate-800 transition group">
+                <a href="{{ route('perfil.index') }}" @click="sidebarOpen = false" class="flex items-center justify-between p-2 rounded-xl hover:bg-slate-800 transition group">
                     <div class="flex items-center space-x-3 overflow-hidden">
                         <div class="w-9 h-9 rounded-full bg-indigo-600/30 border border-indigo-500/50 flex items-center justify-center text-indigo-400 font-bold text-xs shrink-0">
                             {{ substr(auth()->user()->nombres, 0, 1) }}{{ substr(auth()->user()->apellidos, 0, 1) }}
@@ -173,10 +185,17 @@
         <!-- Contenido Principal -->
         <div class="flex-1 flex flex-col min-w-0">
             <!-- Topbar Header -->
-            <header class="h-20 bg-slate-900/60 backdrop-blur-md border-b border-slate-800 flex items-center justify-between px-6 sticky top-0 z-30">
-                <div class="flex items-center space-x-4">
+            <header class="h-16 md:h-20 bg-slate-900/80 backdrop-blur-md border-b border-slate-800 flex items-center justify-between px-4 md:px-6 sticky top-0 z-30">
+                <div class="flex items-center space-x-3">
+                    <!-- Hamburger Toggle Button for Mobile -->
+                    <button type="button" @click="sidebarOpen = !sidebarOpen" 
+                            title="Abrir Menú de Navegación"
+                            class="md:hidden p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 focus:outline-none transition">
+                        <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                    </button>
+
                     <div class="flex items-center space-x-2">
-                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
                         <span class="text-xs font-semibold text-slate-300">Planta Operativa</span>
                     </div>
                 </div>
