@@ -3,14 +3,27 @@
 @section('title', "Orden de Trabajo: {$ot->codigo_ot}")
 
 @section('content')
+<style>
+@media print {
+    body, main, .bg-slate-950 { background-color: white !important; color: black !important; }
+    header, aside, .print\:hidden, form, button { display: none !important; }
+    .bg-slate-900, .bg-slate-950, .p-6, .p-4 { background-color: white !important; border: 1px solid #cbd5e1 !important; box-shadow: none !important; }
+    .text-white, .text-slate-300, .text-slate-400, .text-slate-500 { color: black !important; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+}
+</style>
+
 <div class="space-y-6" x-data="{ addSpareModal: false, uploadPhotoModal: false, pauseModal: false, photoType: 'antes' }">
 
     <!-- Top Navigation & Status Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div class="flex items-center space-x-3">
-            <a href="{{ route('ordenes.index') }}" class="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition">
+            <a href="{{ route('ordenes.index') }}" class="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition print:hidden">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
             </a>
+            <button type="button" onclick="window.print()" class="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition print:hidden" title="Imprimir Orden">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+            </button>
             <div>
                 <div class="flex items-center space-x-2">
                     <span class="font-mono text-xs font-bold px-2.5 py-0.5 rounded bg-blue-600/20 text-blue-400 border border-blue-500/30">
@@ -30,8 +43,26 @@
             </div>
         </div>
 
+        <div class="flex items-center space-x-3 print:hidden">
+            @if($ot->estado === 'Pendiente' || auth()->user()->isAdmin())
+            <a href="{{ route('ordenes.edit', $ot->id) }}" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl transition">
+                Editar OT
+            </a>
+            @endif
+
+            @if(auth()->user()->hasRole([\App\Enums\SystemRole::Admin->value, \App\Enums\SystemRole::Manager->value]) && $ot->estado !== 'Cancelada' && $ot->estado !== 'Completada')
+            <form action="{{ route('ordenes.destroy', $ot->id) }}" method="POST" onsubmit="return confirm('¿Está seguro de anular esta Orden de Trabajo? Si usó repuestos, retornarán al almacén.');">
+                @csrf
+                @method('DELETE')
+                <button type="submit" class="px-4 py-2 bg-rose-500/10 border border-rose-500/30 hover:bg-rose-500 hover:text-white text-rose-400 text-xs font-bold rounded-xl transition">
+                    Anular OT
+                </button>
+            </form>
+            @endif
+        </div>
+
         <div class="flex items-center space-x-2">
-            <!-- Botones de Acción de Estado y Tiempos para el Técnico / Supervisor -->
+            <!-- Botones de Acción (Técnicos/Supervisores) -->
             @if(auth()->user()->isTechnician() || auth()->user()->hasRole(['Administrador', 'Supervisor', 'Gerente_Mantenimiento']))
                 @if($ot->estado == 'Aprobada')
                 <form action="{{ route('ordenes.update-status', $ot->id) }}" method="POST">
@@ -229,6 +260,9 @@
                                 <th class="py-2.5 px-3 text-center">Cantidad</th>
                                 <th class="py-2.5 px-3 text-right">Costo Unit.</th>
                                 <th class="py-2.5 px-3 text-right">Subtotal</th>
+                                @if(auth()->user()->isAdmin() || (in_array($ot->estado, ['Pendiente', 'Aprobada', 'En_Progreso', 'En_Pausa']) && auth()->user()->isTechnician()))
+                                <th class="py-2.5 px-3 text-right">Acción</th>
+                                @endif
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-800/50">
@@ -241,6 +275,17 @@
                                 <td class="py-2.5 px-3 text-center font-bold text-amber-400 font-mono">{{ $sp->cantidad_usada }}</td>
                                 <td class="py-2.5 px-3 text-right font-mono text-slate-400">S/. {{ number_format($sp->costo_unitario, 2) }}</td>
                                 <td class="py-2.5 px-3 text-right font-mono font-bold text-emerald-400">S/. {{ number_format($sp->costo_total, 2) }}</td>
+                                @if(auth()->user()->isAdmin() || (in_array($ot->estado, ['Pendiente', 'Aprobada', 'En_Progreso', 'En_Pausa']) && auth()->user()->isTechnician()))
+                                <td class="py-2.5 px-3 text-right">
+                                    <form action="{{ route('ordenes.remove-spare-part', $sp->id) }}" method="POST" onsubmit="return confirm('¿Seguro que desea retirar este repuesto de la OT? El stock retornará al almacén.')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="text-rose-400 hover:text-rose-300 transition" title="Eliminar y devolver a stock">
+                                            <svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                        </button>
+                                    </form>
+                                </td>
+                                @endif
                             </tr>
                             @empty
                             <tr>
@@ -277,16 +322,28 @@
                             @endif
                         </div>
 
-                        <div class="text-right">
-                            <span class="px-2.5 py-0.5 rounded text-[10px] font-bold border block
-                                @if($labor->estado == 'En_Progreso') bg-indigo-500/10 text-indigo-400 border-indigo-500/30
-                                @elseif($labor->estado == 'En_Pausa') bg-amber-500/10 text-amber-400 border-amber-500/30
-                                @else bg-emerald-500/10 text-emerald-400 border-emerald-500/30 @endif">
-                                {{ str_replace('_', ' ', $labor->estado) }}
-                            </span>
-                            <span class="font-mono text-xs font-extrabold text-white mt-1 block">
-                                {{ number_format($labor->horas_trabajadas ?? 0, 2) }} hrs
-                            </span>
+                        <div class="flex items-center space-x-3">
+                            <div class="text-right">
+                                <span class="px-2.5 py-0.5 rounded text-[10px] font-bold border block
+                                    @if($labor->estado == 'En_Progreso') bg-indigo-500/10 text-indigo-400 border-indigo-500/30
+                                    @elseif($labor->estado == 'En_Pausa') bg-amber-500/10 text-amber-400 border-amber-500/30
+                                    @else bg-emerald-500/10 text-emerald-400 border-emerald-500/30 @endif">
+                                    {{ str_replace('_', ' ', $labor->estado) }}
+                                </span>
+                                <span class="font-mono text-xs font-extrabold text-white mt-1 block">
+                                    {{ number_format($labor->horas_trabajadas ?? 0, 2) }} hrs
+                                </span>
+                            </div>
+
+                            @if(auth()->user()->isAdmin() || (in_array($ot->estado, ['Pendiente', 'Aprobada', 'En_Progreso', 'En_Pausa']) && auth()->user()->isTechnician()))
+                            <form action="{{ route('ordenes.remove-labor-time', $labor->id) }}" method="POST" onsubmit="return confirm('¿Seguro que desea eliminar este registro de tiempo?')" class="border-l border-slate-700 pl-3">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="text-rose-400 hover:text-rose-300 transition" title="Eliminar registro de tiempo">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                </button>
+                            </form>
+                            @endif
                         </div>
                     </div>
                     @empty

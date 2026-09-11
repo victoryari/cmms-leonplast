@@ -42,6 +42,21 @@
                 </button>
             </form>
         </div>
+
+        @if(auth()->user()->hasRole([\App\Enums\SystemRole::Admin->value, \App\Enums\SystemRole::Manager->value]))
+        <div class="flex items-center space-x-3">
+            <a href="{{ route('planes.edit', $plan->id) }}" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl transition">
+                Editar Plan
+            </a>
+            <form action="{{ route('planes.destroy', $plan->id) }}" method="POST" onsubmit="return confirm('¿Está seguro de anular y archivar este plan preventivo?');">
+                @csrf
+                @method('DELETE')
+                <button type="submit" class="px-4 py-2 bg-rose-500/10 border border-rose-500/30 hover:bg-rose-500 hover:text-white text-rose-400 text-xs font-bold rounded-xl transition">
+                    Anular Plan
+                </button>
+            </form>
+        </div>
+        @endif
     </div>
 
     <!-- Main Content Grid -->

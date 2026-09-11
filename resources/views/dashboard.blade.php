@@ -90,6 +90,28 @@
         @endif
     </div>
 
+    <!-- Chart Section (Métricas Visuales) -->
+    <div class="space-y-4">
+        <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider">Análisis y Distribución</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Gráfico OTs -->
+            <div class="p-6 rounded-3xl bg-slate-900 border border-slate-800 shadow-xl flex flex-col">
+                <h4 class="text-xs font-bold text-white mb-4">Estado de Órdenes de Trabajo</h4>
+                <div class="relative flex-1 w-full flex items-center justify-center min-h-[250px]">
+                    <canvas id="otChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Gráfico Activos -->
+            <div class="p-6 rounded-3xl bg-slate-900 border border-slate-800 shadow-xl flex flex-col">
+                <h4 class="text-xs font-bold text-white mb-4">Distribución de Activos Industriales</h4>
+                <div class="relative flex-1 w-full min-h-[250px]">
+                    <canvas id="activosChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Main Navigation Modules Section -->
     <div class="space-y-4">
         <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider">Módulos del Sistema CMMS</h3>
@@ -186,4 +208,97 @@
     </div>
 
 </div>
+
+<!-- Script de Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        Chart.defaults.color = '#94a3b8';
+        Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+        
+        // --- Gráfico de OTs (Doughnut) ---
+        const otDataRaw = @json($otsPorEstado ?? []);
+        const otLabels = Object.keys(otDataRaw);
+        const otData = Object.values(otDataRaw);
+        
+        // Asignar colores según el estado
+        const otColors = otLabels.map(label => {
+            if (label === 'Completada') return '#10b981'; // Emerald
+            if (label === 'Pendiente') return '#f59e0b'; // Amber
+            if (label === 'Aprobada') return '#3b82f6'; // Blue
+            if (label === 'En_Progreso') return '#6366f1'; // Indigo
+            if (label === 'Cancelada') return '#f43f5e'; // Rose
+            return '#64748b'; // Slate default
+        });
+
+        const ctxOt = document.getElementById('otChart').getContext('2d');
+        new Chart(ctxOt, {
+            type: 'doughnut',
+            data: {
+                labels: otLabels,
+                datasets: [{
+                    data: otData,
+                    backgroundColor: otColors,
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' }
+                },
+                cutout: '70%'
+            }
+        });
+
+        // --- Gráfico de Activos (Bar) ---
+        const activosDataRaw = @json($activosPorClasificacion ?? []);
+        const activosLabels = Object.keys(activosDataRaw);
+        const activosData = Object.values(activosDataRaw);
+        
+        const activosColors = activosLabels.map(label => {
+            if (label === 'Equipo') return '#3b82f6';
+            if (label === 'Ubicacion') return '#06b6d4'; // Cyan
+            if (label === 'Herramienta') return '#f59e0b'; 
+            if (label === 'Repuesto_Suministro') return '#10b981';
+            if (label === 'Digital') return '#8b5cf6'; // Purple
+            return '#64748b';
+        });
+
+        const ctxActivos = document.getElementById('activosChart').getContext('2d');
+        new Chart(ctxActivos, {
+            type: 'bar',
+            data: {
+                labels: activosLabels,
+                datasets: [{
+                    label: 'Cantidad',
+                    data: activosData,
+                    backgroundColor: activosColors,
+                    borderRadius: 6,
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(51, 65, 85, 0.5)' },
+                        ticks: { stepSize: 1 }
+                    },
+                    x: {
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    });
+</script>
+
 @endsection

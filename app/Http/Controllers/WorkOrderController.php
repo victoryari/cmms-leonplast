@@ -10,6 +10,7 @@ use App\Models\SparePart;
 use App\Models\WorkOrderSparePart;
 use App\Models\LaborTime;
 use App\Services\NotificationService;
+use App\Services\TelegramNotificationService;
 
 class WorkOrderController extends Controller
 {
@@ -111,8 +112,82 @@ class WorkOrderController extends Controller
         $ot = WorkOrder::create($validated);
         $ot->registrarCambioEstado('Pendiente', 'Solicitud registrada desde Panel Web', auth()->id());
 
+        if ($ot->prioridad === 'Crítica') {
+            app(TelegramNotificationService::class)->sendCriticalWorkOrderAlert($ot);
+        }
+
         return redirect()->route('ordenes.show', $ot->id)
             ->with('success', "Orden de trabajo {$ot->codigo_ot} registrada correctamente.");
+    }
+
+    public function edit($id)
+    {
+        $ot = WorkOrder::findOrFail($id);
+        
+        // Solo permitir editar si está pendiente o si es administrador
+        if ($ot->estado !== 'Pendiente' && !auth()->user()->isAdmin()) {
+            return redirect()->route('ordenes.show', $id)
+                ->with('error', 'Solo se pueden editar Órdenes de Trabajo en estado Pendiente.');
+        }
+
+        $activos = Asset::where('activo', true)->orderBy('codigo_activo', 'asc')->get();
+        return view('ordenes.edit', compact('ot', 'activos'));
+    }
+
+    public function update(Request $request, $id)
+    {
+        $ot = WorkOrder::findOrFail($id);
+
+        if ($ot->estado !== 'Pendiente' && !auth()->user()->isAdmin()) {
+            return redirect()->route('ordenes.show', $id)
+                ->with('error', 'No tiene permisos para editar esta OT.');
+        }
+
+        $validated = $request->validate([
+            'titulo' => 'required|string|max:255',
+            'descripcion' => 'required|string',
+            'activo_id' => 'required|exists:activos,id',
+            'prioridad' => 'required|in:Baja,Media,Alta,Crítica',
+        ]);
+
+        $ot->update($validated);
+
+        return redirect()->route('ordenes.show', $ot->id)
+            ->with('success', "Orden de Trabajo {$ot->codigo_ot} actualizada exitosamente.");
+    }
+
+    public function destroy($id)
+    {
+        $ot = WorkOrder::findOrFail($id);
+
+        if (!auth()->user()->hasRole([\App\Enums\SystemRole::Admin->value, \App\Enums\SystemRole::Manager->value])) {
+            return redirect()->route('ordenes.index')
+                ->with('error', 'No tiene permisos para anular Órdenes de Trabajo.');
+        }
+
+        // Si tiene repuestos, habría que retornarlos (lo haremos en el siguiente paso o aquí)
+        // Como es anulación total, iteramos los repuestos y retornamos el stock
+        foreach ($ot->spareParts as $uso) {
+            $repuesto = $uso->repuesto;
+            $repuesto->increment('stock_actual', $uso->cantidad_utilizada);
+            // Registrar movimiento de retorno
+            \App\Models\InventoryMovement::create([
+                'repuesto_id' => $repuesto->id,
+                'usuario_id' => auth()->id(),
+                'tipo_movimiento' => 'Entrada',
+                'cantidad' => $uso->cantidad_utilizada,
+                'costo_unitario' => $uso->costo_unitario,
+                'motivo' => "Retorno por anulación de OT {$ot->codigo_ot}",
+                'referencia' => "OT-ANULADA-{$ot->id}"
+            ]);
+            $uso->delete();
+        }
+
+        $ot->tiemposManoObra()->delete();
+        $ot->update(['estado' => 'Cancelada', 'activo' => false]);
+
+        return redirect()->route('ordenes.index')
+            ->with('success', "La Orden de Trabajo {$ot->codigo_ot} ha sido anulada y los repuestos retornados al almacén.");
     }
 
     public function show($id)
@@ -380,8 +455,53 @@ class WorkOrderController extends Controller
 
         $ot->update(['fotos' => $fotos]);
 
-        return redirect()->route('ordenes.show', $ot->id)
-            ->with('success', 'Foto adjuntada correctamente a la Orden de Trabajo.');
+        return back()->with('success', 'Fotografía subida y registrada exitosamente.');
+    }
+
+    public function removeSparePart($id)
+    {
+        $uso = WorkOrderSparePart::findOrFail($id);
+        $ot = $uso->workOrder;
+
+        // Solo permitir si la OT no está Completada/Cancelada, o si es Admin
+        if (in_array($ot->estado, ['Completada', 'Cancelada']) && !auth()->user()->isAdmin()) {
+            return back()->with('error', 'No se pueden eliminar repuestos de una Orden ya cerrada.');
+        }
+
+        $repuesto = $uso->repuesto;
+        $cantidad = $uso->cantidad_utilizada;
+
+        // Retornar al almacén
+        $repuesto->increment('stock_actual', $cantidad);
+
+        // Registrar el retorno
+        \App\Models\InventoryMovement::create([
+            'repuesto_id' => $repuesto->id,
+            'usuario_id' => auth()->id(),
+            'tipo_movimiento' => 'Entrada',
+            'cantidad' => $cantidad,
+            'costo_unitario' => $uso->costo_unitario,
+            'motivo' => "Corrección/Retiro de repuesto asignado por error a OT {$ot->codigo_ot}",
+            'referencia' => "OT-RET-{$ot->id}"
+        ]);
+
+        $uso->delete();
+
+        return back()->with('success', 'Repuesto eliminado de la orden y stock retornado al almacén.');
+    }
+
+    public function removeLaborTime($id)
+    {
+        $tiempo = LaborTime::findOrFail($id);
+        $ot = $tiempo->workOrder;
+
+        if (in_array($ot->estado, ['Completada', 'Cancelada']) && !auth()->user()->isAdmin()) {
+            return back()->with('error', 'No se pueden eliminar tiempos de una Orden ya cerrada.');
+        }
+
+        $tiempo->delete();
+
+        return back()->with('success', 'Registro de tiempo de mano de obra eliminado exitosamente.');
     }
 
     public function rate(Request $request, $id)

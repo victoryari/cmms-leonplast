@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Enums\SystemRole;
 
 class Role extends Model
 {
@@ -31,7 +32,7 @@ class Role extends Model
      */
     public function hasPermission(string $modulo, string $accion): bool
     {
-        if ($this->nombre === 'Administrador') {
+        if ($this->nombre === SystemRole::Admin->value) {
             return true;
         }
 

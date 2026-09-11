@@ -31,6 +31,16 @@
             <a href="{{ route('repuestos.edit', $repuesto->id) }}" class="px-3.5 py-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold border border-slate-700 transition">
                 Editar Datos
             </a>
+            
+            @if(auth()->user()->isAdmin())
+            <form action="{{ route('repuestos.destroy', $repuesto->id) }}" method="POST" onsubmit="return confirm('¿Confirma que desea dar de baja este repuesto? El stock se enviará a merma y el repuesto ya no aparecerá en el inventario activo.');">
+                @csrf
+                @method('DELETE')
+                <button type="submit" class="px-3.5 py-2 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-white border border-rose-500/30 text-xs font-semibold transition">
+                    Dar de Baja
+                </button>
+            </form>
+            @endif
 
             <button @click="movementModal = true" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/30 transition">
                 + Registrar Movimiento (Kárdex)

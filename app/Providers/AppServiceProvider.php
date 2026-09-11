@@ -7,6 +7,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use App\Models\Asset;
+use App\Models\SparePart;
+use App\Observers\AssetObserver;
+use App\Observers\SparePartObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -29,6 +33,10 @@ class AppServiceProvider extends ServiceProvider
 
         $this->configureRateLimiting();
         $this->configurePasswordDefaults();
+
+        // Registrar Observers para Auditoría
+        Asset::observe(AssetObserver::class);
+        SparePart::observe(SparePartObserver::class);
     }
 
     /**

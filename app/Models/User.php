@@ -8,6 +8,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Enums\SystemRole;
 
 class User extends Authenticatable
 {
@@ -97,9 +98,9 @@ class User extends Authenticatable
     }
 
     /**
-     * Helper para verificar roles
+     * Helper para verificar roles (acepta String, Enum o array de ellos)
      */
-    public function hasRole(string|array $roles): bool
+    public function hasRole(string|array|SystemRole $roles): bool
     {
         if (!$this->relationLoaded('role')) {
             $this->load('role');
@@ -110,11 +111,16 @@ class User extends Authenticatable
             return false;
         }
 
-        if (is_array($roles)) {
-            return in_array($roleName, $roles, true);
+        // Normalizar a un array de strings
+        if (!is_array($roles)) {
+            $roles = [$roles];
         }
 
-        return $roleName === $roles;
+        $stringRoles = array_map(function ($role) {
+            return $role instanceof SystemRole ? $role->value : $role;
+        }, $roles);
+
+        return in_array($roleName, $stringRoles, true);
     }
 
     /**
@@ -135,22 +141,22 @@ class User extends Authenticatable
 
     public function isAdmin(): bool
     {
-        return $this->hasRole('Administrador');
+        return $this->hasRole(SystemRole::Admin);
     }
 
     public function isManager(): bool
     {
-        return $this->hasRole('Gerente_Mantenimiento');
+        return $this->hasRole(SystemRole::Manager);
     }
 
     public function isSupervisor(): bool
     {
-        return $this->hasRole('Supervisor');
+        return $this->hasRole(SystemRole::Supervisor);
     }
 
     public function isTechnician(): bool
     {
-        return $this->hasRole('Tecnico');
+        return $this->hasRole(SystemRole::Technician);
     }
 
     public function isRequester(): bool

@@ -16,11 +16,18 @@
             </div>
             <p class="text-xs text-slate-400 mt-1">Clasificación de planta por Ubicaciones, Equipos, Herramientas, Repuestos/Suministros y Digitales</p>
         </div>
-        <a href="{{ route('activos.create') }}" 
-           class="inline-flex items-center justify-center space-x-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-extrabold text-xs shadow-lg shadow-blue-600/30 transition transform active:scale-95">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-            <span>+ Registrar Nuevo Activo</span>
-        </a>
+        <div class="flex items-center space-x-2">
+            <button @click="$dispatch('open-qr-scanner')" type="button"
+               class="inline-flex items-center justify-center space-x-2 px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-cyan-400 font-extrabold text-xs shadow-lg transition transform active:scale-95">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                <span>Escanear QR</span>
+            </button>
+            <a href="{{ route('activos.create') }}" 
+               class="inline-flex items-center justify-center space-x-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-extrabold text-xs shadow-lg shadow-blue-600/30 transition transform active:scale-95">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                <span>+ Registrar Nuevo</span>
+            </a>
+        </div>
     </div>
 
     <!-- Dropdown Selector & Navigation Filter Bar (Estilo Referencia Imagen) -->
@@ -317,4 +324,83 @@
     @endif
 
 </div>
+
+<!-- Modal Scanner QR -->
+<div x-data="qrScanner()" 
+     @open-qr-scanner.window="openModal()"
+     x-show="isOpen" 
+     class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/90 backdrop-blur-sm"
+     x-cloak>
+    
+    <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6 w-full max-w-md shadow-2xl relative" @click.away="closeModal()">
+        <button @click="closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white bg-slate-800 p-1.5 rounded-full">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+        <h3 class="text-lg font-extrabold text-white mb-1">Escanear Código QR</h3>
+        <p class="text-xs text-slate-400 mb-4">Apunta la cámara al código QR de la placa del activo.</p>
+        
+        <!-- El div donde html5-qrcode montará su UI -->
+        <div id="qr-reader" class="w-full bg-black rounded-2xl overflow-hidden border border-slate-800 text-slate-500 text-xs"></div>
+        
+        <div class="mt-5 flex justify-end">
+            <button @click="closeModal()" type="button" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition">Cancelar Escaneo</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('qrScanner', () => ({
+            isOpen: false,
+            html5QrcodeScanner: null,
+
+            openModal() {
+                this.isOpen = true;
+                this.$nextTick(() => {
+                    this.startScanner();
+                });
+            },
+
+            closeModal() {
+                this.isOpen = false;
+                this.stopScanner();
+            },
+
+            startScanner() {
+                if (this.html5QrcodeScanner) {
+                    return;
+                }
+                
+                this.html5QrcodeScanner = new Html5QrcodeScanner(
+                    "qr-reader", 
+                    { fps: 10, qrbox: {width: 250, height: 250}, aspectRatio: 1.0 }, 
+                    /* verbose= */ false
+                );
+                
+                this.html5QrcodeScanner.render(
+                    (decodedText, decodedResult) => {
+                        this.closeModal();
+                        window.location.href = "{{ route('activos.index') }}?search=" + encodeURIComponent(decodedText);
+                    },
+                    (errorMessage) => {
+                        // ignore
+                    }
+                );
+            },
+
+            stopScanner() {
+                if (this.html5QrcodeScanner) {
+                    try {
+                        this.html5QrcodeScanner.clear();
+                        this.html5QrcodeScanner = null;
+                    } catch (e) {
+                        console.error("Error clearing scanner", e);
+                    }
+                }
+            }
+        }));
+    });
+</script>
+
 @endsection

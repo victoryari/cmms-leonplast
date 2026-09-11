@@ -14,6 +14,7 @@ use App\Http\Controllers\PublicRequestController;
 use App\Http\Controllers\SystemSettingController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\AuditController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -45,6 +46,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/notificaciones/marcar-todas', [NotificationController::class, 'markAllAsRead'])->name('notificaciones.marcar-todas');
 
     // Módulo de Gestión de Activos Industriales
+    Route::middleware('permission:activos,crear')->group(function () {
+        Route::get('/activos/crear', [AssetController::class, 'create'])->name('activos.create');
+        Route::post('/activos', [AssetController::class, 'store'])->name('activos.store');
+    });
     Route::middleware('permission:activos,ver')->group(function () {
         Route::get('/activos', [AssetController::class, 'index'])->name('activos.index');
         Route::get('/activos/herramientas', [AssetController::class, 'herramientas'])->name('activos.herramientas');
@@ -52,10 +57,6 @@ Route::middleware('auth')->group(function () {
         Route::get('/activos/digitales', [AssetController::class, 'digitales'])->name('activos.digitales');
         Route::get('/activos/{id}', [AssetController::class, 'show'])->name('activos.show');
         Route::get('/activos/{id}/imprimir-qr', [AssetController::class, 'printQr'])->name('activos.print-qr');
-    });
-    Route::middleware('permission:activos,crear')->group(function () {
-        Route::get('/activos/crear', [AssetController::class, 'create'])->name('activos.create');
-        Route::post('/activos', [AssetController::class, 'store'])->name('activos.store');
     });
     Route::middleware('permission:activos,editar')->group(function () {
         Route::get('/activos/{id}/editar', [AssetController::class, 'edit'])->name('activos.edit');
@@ -84,14 +85,20 @@ Route::middleware('auth')->group(function () {
     Route::delete('/ubicaciones/{id}', [\App\Http\Controllers\LocationController::class, 'destroy'])->name('ubicaciones.destroy');
 
     // Módulo de Órdenes de Trabajo (OTs)
-    Route::middleware('permission:ordenes,ver')->group(function () {
-        Route::get('/ordenes-trabajo', [WorkOrderController::class, 'index'])->name('ordenes.index');
-        Route::get('/ordenes-trabajo/{id}', [WorkOrderController::class, 'show'])->name('ordenes.show');
-        Route::post('/ordenes-trabajo/{id}/calificar', [WorkOrderController::class, 'rate'])->name('ordenes.rate');
-    });
     Route::middleware('permission:ordenes,crear')->group(function () {
         Route::get('/ordenes-trabajo/crear', [WorkOrderController::class, 'create'])->name('ordenes.create');
         Route::post('/ordenes-trabajo', [WorkOrderController::class, 'store'])->name('ordenes.store');
+    });
+    Route::middleware('permission:ordenes,editar')->group(function () {
+        Route::get('/ordenes-trabajo/{id}/editar', [WorkOrderController::class, 'edit'])->name('ordenes.edit');
+        Route::put('/ordenes-trabajo/{id}', [WorkOrderController::class, 'update'])->name('ordenes.update');
+        Route::delete('/ordenes-trabajo/{id}', [WorkOrderController::class, 'destroy'])->name('ordenes.destroy');
+    });
+    Route::middleware('permission:ordenes,ver')->group(function () {
+        Route::get('/ordenes-trabajo', [WorkOrderController::class, 'index'])->name('ordenes.index');
+        Route::get('/ordenes-trabajo/{id}', [WorkOrderController::class, 'show'])->name('ordenes.show');
+        Route::get('/ordenes-trabajo/{id}/imprimir', [WorkOrderController::class, 'print'])->name('ordenes.print');
+        Route::post('/ordenes-trabajo/{id}/calificar', [WorkOrderController::class, 'rate'])->name('ordenes.rate');
     });
     Route::middleware('permission:ordenes,asignar')->group(function () {
         Route::post('/ordenes-trabajo/{id}/asignar', [WorkOrderController::class, 'assign'])->name('ordenes.assign');
@@ -101,35 +108,44 @@ Route::middleware('auth')->group(function () {
         Route::post('/ordenes-trabajo/{id}/pausar', [WorkOrderController::class, 'pause'])->name('ordenes.pause');
         Route::post('/ordenes-trabajo/{id}/reanudar', [WorkOrderController::class, 'resume'])->name('ordenes.resume');
         Route::post('/ordenes-trabajo/{id}/repuestos', [WorkOrderController::class, 'addSparePart'])->name('ordenes.add-spare-part');
+        Route::delete('/ordenes-trabajo/repuestos/{id}', [WorkOrderController::class, 'removeSparePart'])->name('ordenes.remove-spare-part');
         Route::post('/ordenes-trabajo/{id}/fotos', [WorkOrderController::class, 'uploadPhoto'])->name('ordenes.upload-photo');
+        Route::post('/ordenes-trabajo/{id}/tiempos', [WorkOrderController::class, 'addLaborTime'])->name('ordenes.add-labor-time');
+        Route::delete('/ordenes-trabajo/tiempos/{id}', [WorkOrderController::class, 'removeLaborTime'])->name('ordenes.remove-labor-time');
     });
 
     // Mantenimiento Preventivo & Rutinas Programadas
-    Route::middleware('permission:planes,ver')->group(function () {
-        Route::get('/planes-preventivos', [PreventivePlanController::class, 'index'])->name('planes.index');
-        Route::get('/planes-preventivos/{id}', [PreventivePlanController::class, 'show'])->name('planes.show');
-    });
     Route::middleware('permission:planes,crear')->group(function () {
         Route::get('/planes-preventivos/crear', [PreventivePlanController::class, 'create'])->name('planes.create');
         Route::post('/planes-preventivos', [PreventivePlanController::class, 'store'])->name('planes.store');
         Route::post('/planes-preventivos/{id}/toggle-status', [PreventivePlanController::class, 'toggleStatus'])->name('planes.toggle-status');
+    });
+    Route::middleware('permission:planes,editar')->group(function () {
+        Route::get('/planes-preventivos/{id}/editar', [PreventivePlanController::class, 'edit'])->name('planes.edit');
+        Route::put('/planes-preventivos/{id}', [PreventivePlanController::class, 'update'])->name('planes.update');
+        Route::delete('/planes-preventivos/{id}', [PreventivePlanController::class, 'destroy'])->name('planes.destroy');
+    });
+    Route::middleware('permission:planes,ver')->group(function () {
+        Route::get('/planes-preventivos', [PreventivePlanController::class, 'index'])->name('planes.index');
+        Route::get('/planes-preventivos/{id}', [PreventivePlanController::class, 'show'])->name('planes.show');
     });
     Route::middleware('permission:planes,ejecutar')->group(function () {
         Route::post('/planes-preventivos/{id}/ejecutar', [PreventivePlanController::class, 'executeNow'])->name('planes.execute-now');
     });
 
     // Módulo de Gestión de Inventario de Repuestos & Almacén
-    Route::middleware('permission:repuestos,ver')->group(function () {
-        Route::get('/repuestos', [SparePartController::class, 'index'])->name('repuestos.index');
-        Route::get('/repuestos/{id}', [SparePartController::class, 'show'])->name('repuestos.show');
-    });
     Route::middleware('permission:repuestos,crear')->group(function () {
         Route::get('/repuestos/crear', [SparePartController::class, 'create'])->name('repuestos.create');
         Route::post('/repuestos', [SparePartController::class, 'store'])->name('repuestos.store');
     });
+    Route::middleware('permission:repuestos,ver')->group(function () {
+        Route::get('/repuestos', [SparePartController::class, 'index'])->name('repuestos.index');
+        Route::get('/repuestos/{id}', [SparePartController::class, 'show'])->name('repuestos.show');
+    });
     Route::middleware('permission:repuestos,editar')->group(function () {
         Route::get('/repuestos/{id}/editar', [SparePartController::class, 'edit'])->name('repuestos.edit');
         Route::put('/repuestos/{id}', [SparePartController::class, 'update'])->name('repuestos.update');
+        Route::delete('/repuestos/{id}', [SparePartController::class, 'destroy'])->name('repuestos.destroy');
     });
     Route::middleware('permission:repuestos,movimientos')->group(function () {
         Route::post('/repuestos/{id}/movimiento', [SparePartController::class, 'registerMovement'])->name('repuestos.movimiento');
@@ -146,6 +162,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/configuracion', [SystemSettingController::class, 'index'])->name('configuracion.index');
         Route::post('/configuracion/catalogo', [SystemSettingController::class, 'updateCatalog'])->name('configuracion.update-catalog');
         Route::post('/configuracion/empresa', [SystemSettingController::class, 'updateCompany'])->name('configuracion.update-company');
+        
+        // Registro de Auditoría (Activity Logs)
+        Route::get('/auditoria', [AuditController::class, 'index'])->name('auditoria.index');
     });
 
     // Módulo de Gestión de Usuarios & Personal de Planta

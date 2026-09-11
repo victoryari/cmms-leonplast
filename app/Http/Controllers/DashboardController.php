@@ -37,6 +37,16 @@ class DashboardController extends Controller
 
         $recentOrders = $recentOrdersQuery->orderBy('created_at', 'desc')->take(6)->get();
 
-        return view('dashboard', compact('user', 'metrics', 'recentOrders'));
+        // Datos para Gráficos
+        $activosPorClasificacion = Asset::selectRaw('tipo_clasificacion, count(*) as total')
+            ->where('activo', true)
+            ->groupBy('tipo_clasificacion')
+            ->pluck('total', 'tipo_clasificacion');
+
+        $otsPorEstado = WorkOrder::selectRaw('estado, count(*) as total')
+            ->groupBy('estado')
+            ->pluck('total', 'estado');
+
+        return view('dashboard', compact('user', 'metrics', 'recentOrders', 'activosPorClasificacion', 'otsPorEstado'));
     }
 }

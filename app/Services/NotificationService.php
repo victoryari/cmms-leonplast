@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Notification;
 use App\Models\WorkOrder;
 use App\Models\User;
+use App\Enums\SystemRole;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -61,7 +62,11 @@ class NotificationService
      */
     public function notifySupervisorBreakdown(WorkOrder $ot): void
     {
-        $supervisores = User::whereHas('role', fn($q) => $q->whereIn('nombre', ['Supervisor', 'Gerente_Mantenimiento', 'Administrador']))->get();
+        $supervisores = User::whereHas('role', fn($q) => $q->whereIn('nombre', [
+            SystemRole::Supervisor->value, 
+            SystemRole::Manager->value, 
+            SystemRole::Admin->value
+        ]))->get();
         $equipoNombre = $ot->equipo?->nombre ?? 'Equipo de Planta';
         $titulo = "⚠️ Avería Reportada: {$ot->codigo_ot}";
         $mensaje = "Nuevo reporte de avería en máquina {$equipoNombre}. Prioridad: {$ot->prioridad}.";

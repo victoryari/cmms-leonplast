@@ -1,0 +1,16 @@
+{
+  "name": "CMMS Leon Plast",
+  "short_name": "CMMS",
+  "description": "Sistema de Mantenimiento Industrial",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#1e40af",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "192x192",
+      "type": "image/x-icon"
+    }
+  ]
+}

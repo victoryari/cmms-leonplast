@@ -142,4 +142,56 @@ class PreventivePlanController extends Controller
         return redirect()->route('planes.show', $plan->id)
             ->with('success', "Estado del plan actualizado a {$nuevoEstado}.");
     }
+
+    public function edit($id)
+    {
+        $plan = PreventivePlan::findOrFail($id);
+        $activos = Asset::where('activo', true)->orderBy('codigo_activo', 'asc')->get();
+        $tecnicos = User::whereHas('role', function ($q) {
+            $q->whereIn('nombre', [\App\Enums\SystemRole::Technician->value, \App\Enums\SystemRole::Supervisor->value]);
+        })->where('activo', true)->get();
+
+        return view('planes.edit', compact('plan', 'activos', 'tecnicos'));
+    }
+
+    public function update(Request $request, $id)
+    {
+        $plan = PreventivePlan::findOrFail($id);
+
+        $validated = $request->validate([
+            'nombre_plan' => 'required|string|max:255',
+            'activo_id' => 'required|exists:activos,id',
+            'tipo_plan' => 'required|in:Por_Calendario,Por_Medidor',
+            'frecuencia_dias' => 'nullable|required_if:tipo_plan,Por_Calendario|integer|min:1',
+            'unidad_medicion' => 'nullable|required_if:tipo_plan,Por_Medidor|string|max:50',
+            'umbral_medidor' => 'nullable|required_if:tipo_plan,Por_Medidor|numeric|min:1',
+            'titulo_ot_generada' => 'required|string|max:255',
+            'descripcion_ot_generada' => 'required|string',
+            'instrucciones_especificas' => 'nullable|string',
+            'tecnico_asignado_id' => 'nullable|exists:usuarios,id',
+            'prioridad_defecto' => 'required|in:Baja,Media,Alta,Crítica',
+        ]);
+
+        $plan->update($validated);
+        
+        // Recalcular próxima ejecución si es por calendario y cambiaron los días
+        if ($plan->tipo_plan === 'Por_Calendario') {
+            $plan->update(['proxima_ejecucion' => $plan->calcularProximaFecha()]);
+        }
+
+        return redirect()->route('planes.show', $plan->id)
+            ->with('success', "Plan preventivo '{$plan->nombre_plan}' actualizado correctamente.");
+    }
+
+    public function destroy($id)
+    {
+        $plan = PreventivePlan::findOrFail($id);
+        
+        // Soft delete the plan, or set to Cancelado
+        $plan->update(['estado' => 'Cancelado']);
+        // Optional: you can also soft delete using $plan->delete() if SoftDeletes trait is used.
+
+        return redirect()->route('planes.index')
+            ->with('success', "Plan preventivo '{$plan->nombre_plan}' ha sido cancelado y archivado.");
+    }
 }

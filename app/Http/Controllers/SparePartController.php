@@ -156,4 +156,27 @@ class SparePartController extends Controller
         return redirect()->route('repuestos.show', $repuesto->id)
             ->with('success', "Movimiento de Kárdex ({$validated['tipo_movimiento']}) registrado exitosamente.");
     }
+
+    public function destroy($id)
+    {
+        $repuesto = SparePart::findOrFail($id);
+        
+        // Soft delete / baja lógica
+        $repuesto->update(['activo' => false]);
+        
+        // Registrar movimiento de merma total por baja
+        if ($repuesto->stock_actual > 0) {
+            $repuesto->registrarMovimiento(
+                'Merma',
+                $repuesto->stock_actual,
+                'Baja del repuesto y retiro del inventario.',
+                'BAJA-SISTEMA',
+                null,
+                auth()->id()
+            );
+        }
+
+        return redirect()->route('repuestos.index')
+            ->with('success', "El repuesto '{$repuesto->nombre}' ha sido dado de baja y retirado del almacén.");
+    }
 }

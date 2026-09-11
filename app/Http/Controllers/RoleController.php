@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Role;
+use App\Enums\SystemRole;
 use App\Models\User;
 
 class RoleController extends Controller
@@ -105,7 +106,7 @@ class RoleController extends Controller
             return back()->with('error', "No se puede eliminar el rol {$role->nombre} porque tiene usuarios activos asignados.");
         }
 
-        if (in_array($role->nombre, ['Administrador', 'Gerente_Mantenimiento', 'Supervisor', 'Tecnico'])) {
+        if (in_array($role->nombre, SystemRole::values())) {
             return back()->with('error', "El rol del sistema '{$role->nombre}' no puede ser eliminado por seguridad.");
         }
 

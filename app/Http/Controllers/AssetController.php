@@ -8,6 +8,8 @@ use App\Models\AssetCategory;
 use App\Models\SparePart;
 use App\Services\CatalogService;
 use Illuminate\Support\Str;
+use App\Http\Requests\StoreAssetRequest;
+use App\Http\Requests\UpdateAssetRequest;
 
 class AssetController extends Controller
 {
@@ -79,28 +81,9 @@ class AssetController extends Controller
         return view('activos.create', compact('catalogos', 'activosPadres', 'proveedores', 'ubicaciones'));
     }
 
-    public function store(Request $request)
+    public function store(StoreAssetRequest $request)
     {
-        $validated = $request->validate([
-            'nombre' => 'required|string|max:200',
-            'categoria' => 'required|string|max:100',
-            'tipo_clasificacion' => 'required|in:Ubicacion,Equipo,Herramienta,Repuesto_Suministro,Digital',
-            'parent_id' => 'nullable|exists:activos,id',
-            'ubicacion_id' => 'nullable|exists:ubicaciones,id',
-            'proveedor_id' => 'nullable|exists:terceros,id',
-            'marca' => 'nullable|string|max:100',
-            'modelo' => 'nullable|string|max:100',
-            'numero_serie' => 'nullable|string|max:100',
-            'ubicacion' => 'nullable|string|max:255',
-            'area' => 'nullable|string|max:100',
-            'estado_operativo' => 'required|string',
-            'estado_condicion' => 'required|string',
-            'costo_adquisicion' => 'nullable|numeric|min:0',
-            'fecha_adquisicion' => 'nullable|date',
-            'vida_util_estimada' => 'nullable|integer|min:1',
-            'descripcion' => 'nullable|string',
-            'imagen' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
-        ]);
+        $validated = $request->validated();
 
         if (!empty($validated['ubicacion_id'])) {
             $loc = \App\Models\Location::find($validated['ubicacion_id']);
@@ -155,31 +138,10 @@ class AssetController extends Controller
         return view('activos.edit', compact('activo', 'catalogos', 'activosPadres', 'proveedores', 'ubicaciones'));
     }
 
-    public function update(Request $request, $id)
+    public function update(UpdateAssetRequest $request, $id)
     {
         $activo = Asset::findOrFail($id);
-
-        $validated = $request->validate([
-            'nombre' => 'required|string|max:200',
-            'categoria' => 'required|string|max:100',
-            'tipo_clasificacion' => 'required|in:Ubicacion,Equipo,Herramienta,Repuesto_Suministro,Digital',
-            'parent_id' => 'nullable|exists:activos,id',
-            'ubicacion_id' => 'nullable|exists:ubicaciones,id',
-            'proveedor_id' => 'nullable|exists:terceros,id',
-            'marca' => 'nullable|string|max:100',
-            'modelo' => 'nullable|string|max:100',
-            'numero_serie' => 'nullable|string|max:100',
-            'ubicacion' => 'nullable|string|max:255',
-            'area' => 'nullable|string|max:100',
-            'estado_operativo' => 'required|string',
-            'estado_condicion' => 'required|string',
-            'costo_adquisicion' => 'nullable|numeric|min:0',
-            'fecha_adquisicion' => 'nullable|date',
-            'vida_util_estimada' => 'nullable|integer|min:1',
-            'descripcion' => 'nullable|string',
-            'imagen' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
-            'eliminar_imagen' => 'nullable|boolean',
-        ]);
+        $validated = $request->validated();
 
         if (!empty($validated['ubicacion_id'])) {
             $loc = \App\Models\Location::find($validated['ubicacion_id']);
