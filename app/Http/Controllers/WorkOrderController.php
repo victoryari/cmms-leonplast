@@ -9,6 +9,8 @@ use App\Models\User;
 use App\Models\SparePart;
 use App\Models\WorkOrderSparePart;
 use App\Models\LaborTime;
+use App\Models\PermisoTrabajoSeguro;
+use App\Models\SolicitudCompra;
 use App\Services\NotificationService;
 use App\Services\TelegramNotificationService;
 
@@ -246,7 +248,28 @@ class WorkOrderController extends Controller
         $estadoAnterior = $ot->estado;
         $nuevoEstado = $validated['nuevo_estado'];
 
+        // Máquina de estados restrictiva
+        if (in_array($estadoAnterior, ['Completada', 'Cancelada'])) {
+            return back()->with('error', "Acción denegada: La OT ya se encuentra {$estadoAnterior} y no admite cambios de estado.");
+        }
+        
+        // Bloquear saltos ilógicos
+        if ($estadoAnterior === 'Pendiente' && !in_array($nuevoEstado, ['Aprobada', 'Cancelada'])) {
+            return back()->with('error', "Una OT Pendiente solo puede ser Aprobada o Cancelada.");
+        }
+
         if ($nuevoEstado === 'En_Progreso') {
+            // Validar Permiso de Trabajo Seguro (PTS/LOTO) si la OT requiere permiso especial
+            if ($ot->requiere_permiso_especial) {
+                $ptsAprobado = PermisoTrabajoSeguro::where('orden_trabajo_id', $ot->id)
+                    ->where('estado', 'APROBADO')
+                    ->exists();
+
+                if (!$ptsAprobado) {
+                    return back()->with('error', 'Bloqueo de Seguridad: Esta OT requiere un Permiso de Trabajo Seguro (PTS/LOTO) aprobado antes de poder iniciar su ejecución.');
+                }
+            }
+
             if (!$ot->fecha_inicio) {
                 $ot->fecha_inicio = now();
             }
@@ -265,6 +288,22 @@ class WorkOrderController extends Controller
         }
 
         if ($nuevoEstado === 'Completada') {
+            // Recibir firma del técnico enviada en el formulario o usar la previamente guardada
+            $firmaTecnico = $request->input('firma_tecnico') ?? $ot->firma_tecnico;
+            if (empty($firmaTecnico)) {
+                return back()->with('error', 'Firma Digital Obligatoria: Debe registrar la firma del técnico para completar la Orden de Trabajo.');
+            }
+
+            $ot->firma_tecnico = $firmaTecnico;
+            if (!$ot->fecha_firma_tecnico) {
+                $ot->fecha_firma_tecnico = now();
+            }
+
+            if ($request->filled('firma_supervisor')) {
+                $ot->firma_supervisor = $request->input('firma_supervisor');
+                $ot->fecha_firma_supervisor = now();
+            }
+
             $ot->fecha_fin_real = now();
             
             $activeLabor = LaborTime::where('orden_trabajo_id', $ot->id)->where('estado', 'En_Progreso')->first();
@@ -517,5 +556,58 @@ class WorkOrderController extends Controller
 
         return redirect()->route('ordenes.show', $ot->id)
             ->with('success', '¡Gracias! Tu calificación de la atención técnica ha sido registrada.');
+    }
+
+    public function storePts(Request $request, $id)
+    {
+        $ot = WorkOrder::findOrFail($id);
+
+        $validated = $request->validate([
+            'tipo_riesgo' => 'required|string|max:100',
+            'checklist_verificacion' => 'required|array',
+            'epp_requeridos' => 'nullable|array',
+            'bloqueo_loto_confirmado' => 'required|boolean',
+            'observaciones' => 'nullable|string|max:500',
+        ]);
+
+        $pts = PermisoTrabajoSeguro::create([
+            'orden_trabajo_id' => $ot->id,
+            'tipo_riesgo' => $validated['tipo_riesgo'],
+            'checklist_verificacion' => $validated['checklist_verificacion'],
+            'epp_requeridos' => $validated['epp_requeridos'] ?? [],
+            'bloqueo_loto_confirmado' => $validated['bloqueo_loto_confirmado'],
+            'aprobado_por' => auth()->id(),
+            'fecha_aprobacion' => now(),
+            'observaciones' => $validated['observaciones'] ?? null,
+            'estado' => $validated['bloqueo_loto_confirmado'] ? 'APROBADO' : 'PENDIENTE',
+        ]);
+
+        return redirect()->route('ordenes.show', $ot->id)
+            ->with('success', "Permiso de Trabajo Seguro (PTS/LOTO #{$pts->id}) registrado y " . ($pts->estado === 'APROBADO' ? 'APROBADO.' : 'PENDIENTE.'));
+    }
+
+    public function saveSignatures(Request $request, $id)
+    {
+        $ot = WorkOrder::findOrFail($id);
+
+        $validated = $request->validate([
+            'firma_tecnico' => 'nullable|string',
+            'firma_supervisor' => 'nullable|string',
+        ]);
+
+        if (!empty($validated['firma_tecnico'])) {
+            $ot->firma_tecnico = $validated['firma_tecnico'];
+            $ot->fecha_firma_tecnico = now();
+        }
+
+        if (!empty($validated['firma_supervisor'])) {
+            $ot->firma_supervisor = $validated['firma_supervisor'];
+            $ot->fecha_firma_supervisor = now();
+        }
+
+        $ot->save();
+
+        return redirect()->route('ordenes.show', $ot->id)
+            ->with('success', 'Firmas digitales registradas correctamente en la Orden de Trabajo.');
     }
 }

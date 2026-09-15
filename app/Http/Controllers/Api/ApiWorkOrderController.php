@@ -218,8 +218,23 @@ class ApiWorkOrderController extends Controller
         $nuevoEstado = $request->input('estado');
         $observaciones = $request->input('observaciones', '');
 
-        if ($nuevoEstado === 'En_Progreso' && !$ot->fecha_inicio) {
-            $ot->fecha_inicio = now();
+        if ($nuevoEstado === 'En_Progreso') {
+            if ($ot->requiere_permiso_especial) {
+                $ptsAprobado = \App\Models\PermisoTrabajoSeguro::where('orden_trabajo_id', $ot->id)
+                    ->where('estado', 'APROBADO')
+                    ->exists();
+
+                if (!$ptsAprobado) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Bloqueo de Seguridad: Esta OT requiere un Permiso de Trabajo Seguro (PTS/LOTO) aprobado antes de iniciar la ejecución.'
+                    ], 422);
+                }
+            }
+
+            if (!$ot->fecha_inicio) {
+                $ot->fecha_inicio = now();
+            }
         }
 
         $ot->observaciones_tecnico = $observaciones;
@@ -447,11 +462,29 @@ class ApiWorkOrderController extends Controller
             return response()->json(['success' => false, 'message' => 'Acceso denegado a esta orden de trabajo.'], 403);
         }
 
+        $firmaTecnico = $request->input('firma_tecnico') ?? $ot->firma_tecnico;
+        if (empty($firmaTecnico)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Firma Digital Obligatoria: Debe adjuntar la firma del técnico para completar la OT.'
+            ], 422);
+        }
+
         $diag = $ot->diagnosticos ?? [];
         $diag[] = $request->input('diagnostico');
 
         $sol = $ot->soluciones ?? [];
         $sol[] = $request->input('solucion');
+
+        $ot->firma_tecnico = $firmaTecnico;
+        if (!$ot->fecha_firma_tecnico) {
+            $ot->fecha_firma_tecnico = now();
+        }
+
+        if ($request->filled('firma_supervisor')) {
+            $ot->firma_supervisor = $request->input('firma_supervisor');
+            $ot->fecha_firma_supervisor = now();
+        }
 
         $ot->update([
             'fecha_fin_real' => now(),

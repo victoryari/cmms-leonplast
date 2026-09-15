@@ -112,7 +112,14 @@ Route::middleware('auth')->group(function () {
         Route::post('/ordenes-trabajo/{id}/fotos', [WorkOrderController::class, 'uploadPhoto'])->name('ordenes.upload-photo');
         Route::post('/ordenes-trabajo/{id}/tiempos', [WorkOrderController::class, 'addLaborTime'])->name('ordenes.add-labor-time');
         Route::delete('/ordenes-trabajo/tiempos/{id}', [WorkOrderController::class, 'removeLaborTime'])->name('ordenes.remove-labor-time');
+        Route::post('/ordenes-trabajo/{id}/pts', [WorkOrderController::class, 'storePts'])->name('ordenes.store-pts');
+        Route::post('/ordenes-trabajo/{id}/firmas', [WorkOrderController::class, 'saveSignatures'])->name('ordenes.save-signatures');
     });
+
+    // Módulos de Recompras de Repuestos & Solicitudes de Compra
+    Route::get('/recompras', [\App\Http\Controllers\PurchaseRequestController::class, 'index'])->name('recompras.index');
+    Route::post('/recompras', [\App\Http\Controllers\PurchaseRequestController::class, 'store'])->name('recompras.store');
+    Route::post('/recompras/{id}/estado', [\App\Http\Controllers\PurchaseRequestController::class, 'updateStatus'])->name('recompras.update-status');
 
     // Mantenimiento Preventivo & Rutinas Programadas
     Route::middleware('permission:planes,crear')->group(function () {

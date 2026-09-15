@@ -46,6 +46,10 @@ class WorkOrder extends Model
         'checklist_seguridad',
         'calificacion_usuario',
         'comentario_usuario',
+        'firma_tecnico',
+        'firma_supervisor',
+        'fecha_firma_tecnico',
+        'fecha_firma_supervisor',
         'historial_estados',
         'creado_por',
         'activo',
@@ -63,6 +67,8 @@ class WorkOrder extends Model
         'fecha_inicio' => 'datetime',
         'fecha_fin_estimada' => 'datetime',
         'fecha_fin_real' => 'datetime',
+        'fecha_firma_tecnico' => 'datetime',
+        'fecha_firma_supervisor' => 'datetime',
         'duracion_estimada_horas' => 'decimal:2',
         'duracion_real_horas' => 'decimal:2',
         'costo_estimado' => 'decimal:2',
@@ -76,6 +82,11 @@ class WorkOrder extends Model
         'checklist_seguridad' => 'array',
         'historial_estados' => 'array',
     ];
+
+    public function permisosTrabajoSeguro(): HasMany
+    {
+        return $this->hasMany(PermisoTrabajoSeguro::class, 'orden_trabajo_id');
+    }
 
     public function activo(): BelongsTo
     {

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class SparePart extends Model
 {
@@ -74,6 +75,11 @@ class SparePart extends Model
         return $this->hasMany(InventoryMovement::class, 'repuesto_id');
     }
 
+    public function solicitudesCompra(): HasMany
+    {
+        return $this->hasMany(SolicitudCompra::class, 'repuesto_id');
+    }
+
     public function getIsLowStockAttribute(): bool
     {
         return $this->stock_actual <= $this->stock_minimo;
@@ -106,12 +112,36 @@ class SparePart extends Model
         if (in_array($tipoMovimiento, ['Entrada', 'Devolucion'])) {
             $stockNuevo = $stockAnterior + $cantidad;
         } elseif (in_array($tipoMovimiento, ['Salida', 'Merma'])) {
-            $stockNuevo = max(0, $stockAnterior - $cantidad);
+            if ($stockAnterior < $cantidad) {
+                throw new \Exception("Stock insuficiente para registrar salida/merma. Disponible: {$stockAnterior}, Solicitado: {$cantidad}.");
+            }
+            $stockNuevo = $stockAnterior - $cantidad;
         } else { // Ajuste
             $stockNuevo = $cantidad; // Para ajuste, cantidad representa el nuevo stock absoluto
         }
 
         $this->update(['stock_actual' => $stockNuevo]);
+
+        // Auto-recompra cuando el stock alcanza o cae por debajo del stock mínimo
+        if ($stockNuevo <= $this->stock_minimo) {
+            $existeSolicitud = SolicitudCompra::where('repuesto_id', $this->id)
+                ->where('estado', 'PENDIENTE')
+                ->exists();
+
+            if (!$existeSolicitud) {
+                $cantSugerida = max(1, ($this->stock_maximo ?? ($this->stock_minimo * 2)) - $stockNuevo);
+                SolicitudCompra::create([
+                    'codigo_solicitud' => 'SC-' . strtoupper(Str::random(6)),
+                    'repuesto_id' => $this->id,
+                    'cantidad_solicitada' => $cantSugerida,
+                    'cantidad_sugerida' => $cantSugerida,
+                    'motivo' => 'STOCK_MINIMO',
+                    'solicitado_por' => $usuarioId ?? auth()->id(),
+                    'estado' => 'PENDIENTE',
+                    'observaciones' => "Generado automáticamente al reducir el stock ({$stockNuevo} unidades restantes <= stock mínimo de {$this->stock_minimo}).",
+                ]);
+            }
+        }
 
         return InventoryMovement::create([
             'repuesto_id' => $this->id,

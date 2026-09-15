@@ -76,6 +76,7 @@ class ApiAssetController extends Controller
     {
         $activo = Asset::where('codigo_activo', $codigo)
             ->orWhere('qr_code_content', $codigo)
+            ->orWhere('numero_serie', $codigo)
             ->first();
 
         if (!$activo) {

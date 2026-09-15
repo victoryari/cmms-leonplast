@@ -13,7 +13,7 @@
 }
 </style>
 
-<div class="space-y-6" x-data="{ addSpareModal: false, uploadPhotoModal: false, pauseModal: false, photoType: 'antes' }">
+<div class="space-y-6" x-data="{ addSpareModal: false, uploadPhotoModal: false, pauseModal: false, ptsModal: false, signatureModal: false, signatureRole: 'tecnico', photoType: 'antes' }">
 
     <!-- Top Navigation & Status Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -434,6 +434,97 @@
                 </div>
             </div>
 
+            <!-- TARJETA PERMISO DE TRABAJO SEGURO (PTS / LOTO) -->
+            <div class="p-6 rounded-3xl bg-slate-900 border border-slate-800 space-y-3">
+                <div class="flex items-center justify-between">
+                    <h4 class="font-bold text-white uppercase text-xs text-rose-400 flex items-center gap-1.5">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                        <span>Seguridad PTS & LOTO</span>
+                    </h4>
+
+                    @php
+                        $latestPts = $ot->permisosTrabajoSeguro()->latest()->first();
+                    @endphp
+
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold border
+                        @if($latestPts && $latestPts->estado === 'APROBADO') bg-emerald-500/10 text-emerald-400 border-emerald-500/30
+                        @elseif($ot->requiere_permiso_especial) bg-amber-500/10 text-amber-400 border-amber-500/30
+                        @else bg-slate-500/10 text-slate-400 border-slate-500/30 @endif">
+                        {{ $latestPts ? $latestPts->estado : ($ot->requiere_permiso_especial ? 'REQUIERE PTS' : 'ESTÁNDAR') }}
+                    </span>
+                </div>
+
+                <p class="text-xs text-slate-400">
+                    @if($ot->requiere_permiso_especial)
+                        Esta OT requiere bloqueo de energías (LOTO) y permiso de trabajo especial verificado antes de iniciar.
+                    @else
+                        Evaluación de riesgos operacionales y equipo de protección personal.
+                    @endif
+                </p>
+
+                @if($latestPts)
+                <div class="p-3 rounded-2xl bg-slate-950 border border-slate-800 space-y-1 text-xs">
+                    <div class="flex justify-between text-slate-300 font-medium">
+                        <span>Riesgo: <strong class="text-white">{{ str_replace('_', ' ', $latestPts->tipo_riesgo) }}</strong></span>
+                        <span>Aprobado: <strong class="text-emerald-400">{{ $latestPts->fecha_aprobacion?->format('d/m H:i') }}</strong></span>
+                    </div>
+                    <p class="text-[10px] text-slate-500">LOTO Confirmado: {{ $latestPts->bloqueo_loto_confirmado ? 'Sí (Candado colocado)' : 'No' }}</p>
+                </div>
+                @endif
+
+                @if(auth()->user()->isTechnician() || auth()->user()->hasRole(['Administrador', 'Supervisor', 'Gerente_Mantenimiento']))
+                <button @click="ptsModal = true" class="w-full py-2 rounded-xl bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 text-xs font-bold transition">
+                    🛡️ {{ $latestPts ? 'Registrar Nuevo Checklist PTS' : 'Diligenciar Permiso PTS / LOTO' }}
+                </button>
+                @endif
+            </div>
+
+            <!-- TARJETA FIRMAS DIGITALES DE CIERRE -->
+            <div class="p-6 rounded-3xl bg-slate-900 border border-slate-800 space-y-3">
+                <h4 class="font-bold text-white uppercase text-xs text-cyan-400 flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                    <span>Firmas Digitales de Cierre</span>
+                </h4>
+
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <!-- Firma Técnico (Mandatoria) -->
+                    <div class="p-3 rounded-2xl bg-slate-950 border border-slate-800 space-y-2 text-center">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase block">Firma Técnico *</span>
+                        @if($ot->firma_tecnico)
+                            <img src="{{ $ot->firma_tecnico }}" class="h-12 mx-auto object-contain bg-white/10 rounded border border-slate-700 p-1">
+                            <span class="text-[9px] text-emerald-400 font-mono block">✓ Registrada {{ $ot->fecha_firma_tecnico?->format('d/m H:i') }}</span>
+                        @else
+                            <div class="h-12 flex items-center justify-center border border-dashed border-amber-500/40 rounded bg-amber-500/5">
+                                <span class="text-[10px] text-amber-400 font-bold">Pendiente (Obligatorio)</span>
+                            </div>
+                        @endif
+                        @if(!$ot->firma_tecnico && (auth()->user()->isTechnician() || auth()->user()->isAdmin()))
+                        <button @click="signatureRole = 'tecnico'; signatureModal = true; $nextTick(() => initCanvas());" class="w-full py-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-[10px] font-bold transition">
+                            ✍️ Firmar ahora
+                        </button>
+                        @endif
+                    </div>
+
+                    <!-- Firma Supervisor (Opcional) -->
+                    <div class="p-3 rounded-2xl bg-slate-950 border border-slate-800 space-y-2 text-center">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase block">Firma Supervisor</span>
+                        @if($ot->firma_supervisor)
+                            <img src="{{ $ot->firma_supervisor }}" class="h-12 mx-auto object-contain bg-white/10 rounded border border-slate-700 p-1">
+                            <span class="text-[9px] text-emerald-400 font-mono block">✓ Registrada {{ $ot->fecha_firma_supervisor?->format('d/m H:i') }}</span>
+                        @else
+                            <div class="h-12 flex items-center justify-center border border-dashed border-slate-800 rounded bg-slate-900/50">
+                                <span class="text-[10px] text-slate-500">Opcional</span>
+                            </div>
+                        @endif
+                        @if(!$ot->firma_supervisor && (auth()->user()->isSupervisor() || auth()->user()->isAdmin()))
+                        <button @click="signatureRole = 'supervisor'; signatureModal = true; $nextTick(() => initCanvas());" class="w-full py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold transition">
+                            ✍️ Firmar ahora
+                        </button>
+                        @endif
+                    </div>
+                </div>
+            </div>
+
         </div>
 
     </div>
@@ -542,5 +633,168 @@
         </div>
     </div>
 
+    <!-- MODAL: DILIGENCIAR PERMISO DE TRABAJO SEGURO (PTS / LOTO) -->
+    <div x-show="ptsModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm" x-cloak>
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 class="text-sm font-bold text-rose-400 uppercase tracking-wider flex items-center gap-2">
+                    <span>🛡️ Permiso de Trabajo Seguro (PTS / LOTO)</span>
+                </h3>
+                <button @click="ptsModal = false" class="text-slate-400 hover:text-white">✕</button>
+            </div>
+
+            <form action="{{ route('ordenes.store-pts', $ot->id) }}" method="POST" class="space-y-4 text-xs">
+                @csrf
+                <div>
+                    <label class="block font-semibold text-slate-300 mb-1">Clasificación Principal del Riesgo *</label>
+                    <select name="tipo_riesgo" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white">
+                        <option value="LOTO_MECANICO_ELECTRICO">🔒 LOTO (Bloqueo Eléctrico / Mecánico de Energía)</option>
+                        <option value="TRABAJO_EN_ALTURA">🧗 Trabajo en Altura (>1.80m / Uso de Arnés)</option>
+                        <option value="ESPACIO_CONFINADO">🕳️ Espacio Confinado / Atmósfera Restringida</option>
+                        <option value="ALTO_VOLTAJE">⚡ Alto Voltaje / Tableros Energizados</option>
+                        <option value="TRABAJO_EN_CALIENTE">🔥 Trabajo en Caliente (Soldadura / Corte)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-slate-300 mb-1">Equipo de Protección Personal (EPP Obligatorio)</label>
+                    <div class="grid grid-cols-2 gap-2 text-slate-300 bg-slate-950 p-3 rounded-xl border border-slate-800">
+                        <label class="flex items-center space-x-2"><input type="checkbox" name="epp_requeridos[]" value="Casco_Dieléctrico" checked class="rounded border-slate-800 text-rose-500"> <span>Casco Dieléctrico</span></label>
+                        <label class="flex items-center space-x-2"><input type="checkbox" name="epp_requeridos[]" value="Gafas_Seguridad" checked class="rounded border-slate-800 text-rose-500"> <span>Gafas de Seguridad</span></label>
+                        <label class="flex items-center space-x-2"><input type="checkbox" name="epp_requeridos[]" value="Zapatos_Punta_Acero" checked class="rounded border-slate-800 text-rose-500"> <span>Calzado de Seguridad</span></label>
+                        <label class="flex items-center space-x-2"><input type="checkbox" name="epp_requeridos[]" value="Guantes_Multirriesgo" checked class="rounded border-slate-800 text-rose-500"> <span>Guantes Aislantes</span></label>
+                        <label class="flex items-center space-x-2"><input type="checkbox" name="epp_requeridos[]" value="Arnés_Anticaídas" class="rounded border-slate-800 text-rose-500"> <span>Arnés de Seguridad</span></label>
+                        <label class="flex items-center space-x-2"><input type="checkbox" name="epp_requeridos[]" value="Candado_Pinza_LOTO" class="rounded border-slate-800 text-rose-500"> <span>Candado & Tarjeta LOTO</span></label>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-slate-300 mb-1">Checklist Verificación de Riesgos</label>
+                    <div class="space-y-1.5 bg-slate-950 p-3 rounded-xl border border-slate-800 text-slate-300">
+                        <label class="flex items-center space-x-2"><input type="checkbox" name="checklist_verificacion[]" value="Energias_Cero_Verificadas" checked class="rounded border-slate-800 text-rose-500"> <span>¿Se verificó ausencia de energía residual?</span></label>
+                        <label class="flex items-center space-x-2"><input type="checkbox" name="checklist_verificacion[]" value="Area_Delimitada" checked class="rounded border-slate-800 text-rose-500"> <span>¿Área delimitada y señalizada?</span></label>
+                        <label class="flex items-center space-x-2"><input type="checkbox" name="checklist_verificacion[]" value="Extintor_Cercano" class="rounded border-slate-800 text-rose-500"> <span>¿Extintor operacional cercano?</span></label>
+                    </div>
+                </div>
+
+                <div class="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl space-y-2">
+                    <label class="flex items-center space-x-2 text-rose-300 font-bold">
+                        <input type="checkbox" name="bloqueo_loto_confirmado" value="1" required class="rounded border-rose-500/40 text-rose-500">
+                        <span>CONFIRMO EL BLOQUEO FÍSICO LOTO (CANDADO Y TARJETA COLOCADOS)</span>
+                    </label>
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-slate-300 mb-1">Observaciones Adicionales de Seguridad</label>
+                    <textarea name="observaciones" rows="2" placeholder="Ej: Válvula principal cerrada con cadena y candado #4" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs text-white"></textarea>
+                </div>
+
+                <div class="flex items-center justify-end space-x-2 pt-2">
+                    <button type="button" @click="ptsModal = false" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">Cancelar</button>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-lg shadow-rose-600/30">Aprobar Permiso PTS</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: LIENZO CANVAS DE FIRMA DIGITAL -->
+    <div x-show="signatureModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm" x-cloak>
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 class="text-sm font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-2">
+                    <span>✍️ Captura de Firma Digital</span>
+                </h3>
+                <button @click="signatureModal = false" class="text-slate-400 hover:text-white">✕</button>
+            </div>
+
+            <form action="{{ route('ordenes.save-signatures', $ot->id) }}" method="POST" id="signatureForm" class="space-y-4 text-xs">
+                @csrf
+                <input type="hidden" name="firma_tecnico" id="firmaTecnicoInput">
+                <input type="hidden" name="firma_supervisor" id="firmaSupervisorInput">
+
+                <p class="text-slate-400 text-center text-[11px]">Por favor dibuje su firma manuscrita dentro del recuadro (soporta pantalla táctil o mouse).</p>
+
+                <div class="border-2 border-dashed border-slate-700 bg-white rounded-2xl p-1 relative overflow-hidden">
+                    <canvas id="signatureCanvas" width="380" height="180" class="w-full h-44 cursor-crosshair touch-none"></canvas>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <button type="button" onclick="clearCanvas()" class="px-3 py-1.5 rounded-xl bg-slate-800 text-slate-300 hover:text-white text-[11px] font-semibold">
+                        🗑️ Limpiar Lienzo
+                    </button>
+                    <span class="text-[10px] text-slate-500 uppercase font-mono" x-text="signatureRole === 'tecnico' ? 'Firmando como: TÉCNICO' : 'Firmando como: SUPERVISOR'"></span>
+                </div>
+
+                <div class="flex items-center justify-end space-x-2 pt-2">
+                    <button type="button" @click="signatureModal = false" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">Cancelar</button>
+                    <button type="button" onclick="saveSignaturePad()" class="px-5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs shadow-lg shadow-cyan-600/30">Guardar Firma</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
 </div>
+
+<script>
+let canvas, ctx, isDrawing = false;
+
+function initCanvas() {
+    canvas = document.getElementById('signatureCanvas');
+    if (!canvas) return;
+    ctx = canvas.getContext('2d');
+    
+    // Configuración trazo firma
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    // Mouse events
+    canvas.onmousedown = (e) => { isDrawing = true; ctx.beginPath(); ctx.moveTo(e.offsetX, e.offsetY); };
+    canvas.onmousemove = (e) => { if (isDrawing) { ctx.lineTo(e.offsetX, e.offsetY); ctx.stroke(); } };
+    canvas.onmouseup = () => { isDrawing = false; };
+
+    // Touch events para móviles/tablets
+    canvas.ontouchstart = (e) => {
+        e.preventDefault();
+        const rect = canvas.getBoundingClientRect();
+        const touch = e.touches[0];
+        isDrawing = true;
+        ctx.beginPath();
+        ctx.moveTo(touch.clientX - rect.left, touch.clientY - rect.top);
+    };
+    canvas.ontouchmove = (e) => {
+        e.preventDefault();
+        if (isDrawing) {
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            ctx.lineTo(touch.clientX - rect.left, touch.clientY - rect.top);
+            ctx.stroke();
+        }
+    };
+    canvas.ontouchend = () => { isDrawing = false; };
+}
+
+function clearCanvas() {
+    if (ctx && canvas) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+}
+
+function saveSignaturePad() {
+    if (!canvas) return;
+    const dataUrl = canvas.toDataURL('image/png');
+    const form = document.getElementById('signatureForm');
+    const alpineData = Alpine.$data(document.querySelector('[x-data]'));
+
+    if (alpineData.signatureRole === 'tecnico') {
+        document.getElementById('firmaTecnicoInput').value = dataUrl;
+    } else {
+        document.getElementById('firmaSupervisorInput').value = dataUrl;
+    }
+
+    form.submit();
+}
+</script>
 @endsection
+
