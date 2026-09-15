@@ -115,12 +115,12 @@ class _LoginViewState extends State<LoginView> {
             ),
           ),
 
-          // 2. Fondo Ola Inferior Izquierda (Gradiente Morado)
+          // 2. Fondo Ola Inferior Completa (Gradiente Morado 100% hasta la base del dispositivo)
           Positioned(
+            top: size.height * 0.42,
             bottom: 0,
             left: 0,
             right: 0,
-            height: size.height * 0.32,
             child: ClipPath(
               clipper: BottomWaveClipper(),
               child: Container(
@@ -142,7 +142,7 @@ class _LoginViewState extends State<LoginView> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SizedBox(height: size.height * 0.16),
+                  SizedBox(height: size.height * 0.14),
 
                   // Título LOGIN
                   const Text(
@@ -183,9 +183,9 @@ class _LoginViewState extends State<LoginView> {
                     const SizedBox(height: 20),
                   ],
 
-                  // Campo Username / Email
+                  // Campo Correo Electrónico
                   const Text(
-                    'Username / Correo',
+                    'Correo Electrónico',
                     style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
                   ),
                   const SizedBox(height: 4),
@@ -202,9 +202,9 @@ class _LoginViewState extends State<LoginView> {
                   ),
                   const SizedBox(height: 28),
 
-                  // Campo Password
+                  // Campo Contraseña
                   const Text(
-                    'Password / Contraseña',
+                    'Contraseña',
                     style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
                   ),
                   const SizedBox(height: 4),
@@ -223,15 +223,15 @@ class _LoginViewState extends State<LoginView> {
                   ),
                   const SizedBox(height: 10),
 
-                  // Olvidó su contraseña
+                  // ¿Olvidaste tu contraseña?
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
                       onPressed: () {},
                       style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
                       child: const Text(
-                        'Forget your password?',
-                        style: TextStyle(color: Color(0xFF3B82F6), fontSize: 12, fontWeight: FontWeight.w600),
+                        '¿Olvidaste tu contraseña?',
+                        style: TextStyle(color: Color(0xFF2563EB), fontSize: 12, fontWeight: FontWeight.bold),
                       ),
                     ),
                   ),
@@ -313,14 +313,14 @@ class TopWaveClipper extends CustomClipper<Path> {
   bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }
 
-/// Clipper para la Ola Inferior Izquierda
+/// Clipper para la Ola Inferior Izquierda (Cubre el 100% de la base)
 class BottomWaveClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
     var path = Path();
-    path.moveTo(0, size.height * 0.20);
-    var firstControlPoint = Offset(size.width * 0.45, size.height * 0.02);
-    var firstEndPoint = Offset(size.width, size.height * 0.70);
+    path.moveTo(0, size.height * 0.22);
+    var firstControlPoint = Offset(size.width * 0.45, 0);
+    var firstEndPoint = Offset(size.width, size.height * 0.45);
     path.quadraticBezierTo(firstControlPoint.dx, firstControlPoint.dy, firstEndPoint.dx, firstEndPoint.dy);
     path.lineTo(size.width, size.height);
     path.lineTo(0, size.height);
