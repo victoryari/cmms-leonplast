@@ -104,9 +104,9 @@ class ReportController extends Controller
                     $this->sanitizeCsvCell($act->nombre),
                     $this->sanitizeCsvCell($act->categoria),
                     $this->sanitizeCsvCell($act->ubicacion),
-                    $act->mtbf_horas ?? 720,
+                    $act->mtbf_horas ?? 0,
                     $act->mttr_horas ?? 0,
-                    ($act->disponibilidad_porcentaje ?? 98.5) . '%',
+                    ($act->disponibilidad_porcentaje ?? 100.0) . '%',
                     $this->sanitizeCsvCell($act->estado_operativo),
                     number_format($costoTotal, 2, '.', '')
                 ]);

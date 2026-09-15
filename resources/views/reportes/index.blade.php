@@ -151,7 +151,7 @@
                         </td>
 
                         <td class="py-3 px-4 text-center font-mono font-bold text-blue-400">
-                            {{ number_format($act->mtbf_horas ?? 720, 1) }} h
+                            {{ number_format($act->mtbf_horas ?? 0, 1) }} h
                         </td>
 
                         <td class="py-3 px-4 text-center font-mono font-bold text-amber-400">
@@ -160,10 +160,10 @@
 
                         <td class="py-3 px-4 text-center">
                             <span class="px-2.5 py-0.5 rounded-full font-bold text-[11px] border
-                                @if(($act->disponibilidad_porcentaje ?? 98) >= 95) bg-emerald-500/10 text-emerald-400 border-emerald-500/30
-                                @elseif(($act->disponibilidad_porcentaje ?? 98) >= 85) bg-amber-500/10 text-amber-400 border-amber-500/30
+                                @if(($act->disponibilidad_porcentaje ?? 100) >= 95) bg-emerald-500/10 text-emerald-400 border-emerald-500/30
+                                @elseif(($act->disponibilidad_porcentaje ?? 100) >= 85) bg-amber-500/10 text-amber-400 border-amber-500/30
                                 @else bg-rose-500/10 text-rose-400 border-rose-500/30 @endif">
-                                {{ number_format($act->disponibilidad_porcentaje ?? 98.5, 1) }}%
+                                {{ number_format($act->disponibilidad_porcentaje ?? 100.0, 1) }}%
                             </span>
                         </td>
 
@@ -192,11 +192,11 @@
         new Chart(paretoCtx, {
             type: 'bar',
             data: {
-                labels: paretoLabels,
+                labels: paretoLabels.length ? paretoLabels : ['Sin registros de averías'],
                 datasets: [
                     {
                         label: '% Acumulado (Pareto)',
-                        data: paretoCum,
+                        data: paretoCum.length ? paretoCum : [0],
                         type: 'line',
                         borderColor: '#f59e0b', // Amber-500
                         backgroundColor: '#f59e0b',
@@ -207,7 +207,7 @@
                     },
                     {
                         label: 'Número de Fallas',
-                        data: paretoCounts,
+                        data: paretoCounts.length ? paretoCounts : [0],
                         backgroundColor: 'rgba(59, 130, 246, 0.7)', // Blue-500
                         borderColor: '#3b82f6',
                         borderWidth: 1,
@@ -249,17 +249,18 @@
 
         // 2. Chart de Distribución de Costos (Dona)
         const costsCtx = document.getElementById('costsChart').getContext('2d');
+        const prevCost = {{ $kpis['costo_preventivo'] }};
+        const corrCost = {{ $kpis['costo_correctivo'] }};
+        const othrCost = {{ $kpis['costo_otros'] }};
+        const hasCosts = (prevCost + corrCost + othrCost) > 0;
+
         new Chart(costsCtx, {
             type: 'doughnut',
             data: {
                 labels: ['Preventivo', 'Correctivo', 'Mejora / Otros'],
                 datasets: [{
-                    data: [
-                        {{ $kpis['costo_preventivo'] ?: 140 }},
-                        {{ $kpis['costo_correctivo'] ?: 135 }},
-                        {{ $kpis['costo_otros'] ?: 50 }}
-                    ],
-                    backgroundColor: ['#10b981', '#f43f5e', '#3b82f6'],
+                    data: hasCosts ? [prevCost, corrCost, othrCost] : [1, 0, 0],
+                    backgroundColor: hasCosts ? ['#10b981', '#f43f5e', '#3b82f6'] : ['#334155', '#334155', '#334155'],
                     borderWidth: 0
                 }]
             },

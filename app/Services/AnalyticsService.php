@@ -27,26 +27,26 @@ class AnalyticsService
         $numCorrectivas = (clone $correctivas)->count();
         $horasReparacionTotal = (clone $correctivas)->whereNotNull('duracion_real_horas')->sum('duracion_real_horas') ?? 0;
 
-        // Si no hay duraciones reales registradas, usar estimación promedio
-        if ($horasReparacionTotal == 0 && $numCorrectivas > 0) {
-            $horasReparacionTotal = $numCorrectivas * 3.5;
+        if ($numCorrectivas > 0) {
+            if ($horasReparacionTotal == 0) {
+                $horasReparacionTotal = $numCorrectivas * 3.5;
+            }
+            $mttrGlobal = round($horasReparacionTotal / $numCorrectivas, 2);
+
+            $numActivos = Asset::where('activo', true)->count() ?: 1;
+            $horasOperativasPlanta = 720 * $numActivos;
+            $horasInactividad = $horasReparacionTotal;
+
+            $mtbfGlobal = round(max(1, $horasOperativasPlanta - $horasInactividad) / $numCorrectivas, 2);
+            $denominador = ($mtbfGlobal + $mttrGlobal) ?: 1;
+            $disponibilidadGlobal = round(($mtbfGlobal / $denominador) * 100, 2);
+            if ($disponibilidadGlobal > 100) $disponibilidadGlobal = 100.0;
+        } else {
+            // Sin fallas registradas
+            $mttrGlobal = 0.0;
+            $mtbfGlobal = 0.0;
+            $disponibilidadGlobal = 100.0;
         }
-
-        // MTTR Global (Tiempo Medio de Reparación) = Horas Totales de Reparación / Nº de Fallas
-        $mttrGlobal = $numCorrectivas > 0 ? round($horasReparacionTotal / $numCorrectivas, 2) : 0.0;
-
-        // Horas operativas asumidas de planta en el período (ej: 720 horas al mes por activo)
-        $numActivos = Asset::where('activo', true)->count() ?: 1;
-        $horasOperativasPlanta = 720 * $numActivos;
-
-        // MTBF Global (Tiempo Medio Entre Fallas) = (Horas Operativas - Horas Inactividad) / Nº de Fallas
-        $horasInactividad = $horasReparacionTotal;
-        $mtbfGlobal = $numCorrectivas > 0 ? round(max(1, $horasOperativasPlanta - $horasInactividad) / $numCorrectivas, 2) : 720.0;
-
-        // Disponibilidad Global % = [MTBF / (MTBF + MTTR)] * 100
-        $denominador = ($mtbfGlobal + $mttrGlobal) ?: 1;
-        $disponibilidadGlobal = round(($mtbfGlobal / $denominador) * 100, 2);
-        if ($disponibilidadGlobal > 100) $disponibilidadGlobal = 98.5;
 
         // Costos acumulados
         $costoTotal = (clone $query)->sum('costo_real') ?? 0;
@@ -85,37 +85,23 @@ class AnalyticsService
             ->orderBy('total_fallas', 'desc')
             ->get();
 
-        $totalFallas = $fallasPorActivo->sum('total_fallas') ?: 1;
-
         $labels = [];
         $counts = [];
         $cumulativePercentages = [];
-        $runningSum = 0;
 
-        foreach ($fallasPorActivo as $item) {
-            $activo = Asset::find($item->activo_id);
-            $nombreActivo = $activo ? "[{$activo->codigo_activo}] {$activo->nombre}" : "Activo #{$item->activo_id}";
-            
-            $labels[] = StrLimit($nombreActivo, 25);
-            $counts[] = (int) $item->total_fallas;
+        if ($fallasPorActivo->isNotEmpty()) {
+            $totalFallas = $fallasPorActivo->sum('total_fallas') ?: 1;
+            $runningSum = 0;
 
-            $runningSum += $item->total_fallas;
-            $cumulativePercentages[] = round(($runningSum / $totalFallas) * 100, 1);
-        }
+            foreach ($fallasPorActivo as $item) {
+                $activo = Asset::find($item->activo_id);
+                $nombreActivo = $activo ? "[{$activo->codigo_activo}] {$activo->nombre}" : "Activo #{$item->activo_id}";
+                
+                $labels[] = StrLimit($nombreActivo, 25);
+                $counts[] = (int) $item->total_fallas;
 
-        // Si no hay fallas correctivas registradas aún, armar datos por defecto con los activos poblados
-        if (empty($labels)) {
-            $activosList = Asset::where('activo', true)->take(6)->get();
-            $dummyCounts = [4, 3, 2, 1, 1, 1];
-            $totalDummy = array_sum($dummyCounts);
-            $running = 0;
-
-            foreach ($activosList as $idx => $act) {
-                $labels[] = "[{$act->codigo_activo}] {$act->nombre}";
-                $cnt = $dummyCounts[$idx] ?? 1;
-                $counts[] = $cnt;
-                $running += $cnt;
-                $cumulativePercentages[] = round(($running / $totalDummy) * 100, 1);
+                $runningSum += $item->total_fallas;
+                $cumulativePercentages[] = round(($runningSum / $totalFallas) * 100, 1);
             }
         }
 
@@ -139,14 +125,19 @@ class AnalyticsService
                 ->get();
 
             $numFallas = $otsCorrectivas->count();
-            $horasReparacion = $otsCorrectivas->sum('duracion_real_horas') ?: ($numFallas * 3.0);
 
-            $mttr = $numFallas > 0 ? round($horasReparacion / $numFallas, 2) : 0.0;
-            $mtbf = $numFallas > 0 ? round(max(1, 720 - $horasReparacion) / $numFallas, 2) : 720.0;
-            
-            $den = ($mtbf + $mttr) ?: 1;
-            $disp = round(($mtbf / $den) * 100, 2);
-            if ($disp > 100) $disp = 98.5;
+            if ($numFallas > 0) {
+                $horasReparacion = $otsCorrectivas->sum('duracion_real_horas') ?: ($numFallas * 3.0);
+                $mttr = round($horasReparacion / $numFallas, 2);
+                $mtbf = round(max(1, 720 - $horasReparacion) / $numFallas, 2);
+                $den = ($mtbf + $mttr) ?: 1;
+                $disp = round(($mtbf / $den) * 100, 2);
+                if ($disp > 100) $disp = 100.0;
+            } else {
+                $mttr = 0.0;
+                $mtbf = 0.0;
+                $disp = 100.0;
+            }
 
             $act->update([
                 'mtbf_horas' => $mtbf,
@@ -160,3 +151,4 @@ class AnalyticsService
 function StrLimit($string, $limit = 25) {
     return mb_strlen($string) > $limit ? mb_substr($string, 0, $limit) . '...' : $string;
 }
+
