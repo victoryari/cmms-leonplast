@@ -11,8 +11,8 @@ class LoginView extends StatefulWidget {
 }
 
 class _LoginViewState extends State<LoginView> {
-  final _emailController = TextEditingController(text: 'tecnico1@leonplast.com');
-  final _passwordController = TextEditingController(text: 'password');
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -161,19 +161,6 @@ class _LoginViewState extends State<LoginView> {
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 20),
-
-              // Credenciales Rápidas de Prueba
-              TextButton.icon(
-                onPressed: () {
-                  setState(() {
-                    _emailController.text = 'tecnico1@leonplast.com';
-                    _passwordController.text = 'password';
-                  });
-                },
-                icon: const Icon(Icons.vpn_key_outlined, size: 14, color: Colors.cyanAccent),
-                label: const Text('Cargar credenciales de Técnico de Prueba', style: TextStyle(color: Colors.cyanAccent, fontSize: 11)),
               ),
             ],
           ),
