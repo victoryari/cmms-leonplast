@@ -8,15 +8,15 @@ class VoiceTextField extends StatefulWidget {
   final int maxLines;
 
   const VoiceTextField({
-    Key? key,
+    super.key,
     required this.controller,
     required this.labelText,
     this.hintText = 'Escriba o toque el micrófono para dictar por voz...',
     this.maxLines = 3,
-  }) : super(key: key);
+  });
 
   @override
-  _VoiceTextFieldState createState() => _VoiceTextFieldState();
+  State<VoiceTextField> createState() => _VoiceTextFieldState();
 }
 
 class _VoiceTextFieldState extends State<VoiceTextField> {
@@ -33,19 +33,25 @@ class _VoiceTextFieldState extends State<VoiceTextField> {
   void _toggleListening() async {
     if (!_isListening) {
       bool available = await _speech.initialize(
-        onError: (val) => setState(() => _isListening = false),
+        onError: (val) {
+          if (!mounted) return;
+          setState(() => _isListening = false);
+        },
         onStatus: (val) {
           if (val == 'done' || val == 'notListening') {
+            if (!mounted) return;
             setState(() => _isListening = false);
           }
         },
       );
 
       if (available) {
+        if (!mounted) return;
         setState(() => _isListening = true);
         _speech.listen(
-          localeId: 'es_PE', // Idioma español para técnicos de planta
+          listenOptions: stt.SpeechListenOptions(localeId: 'es_PE'),
           onResult: (val) {
+            if (!mounted) return;
             setState(() {
               _lastWords = val.recognizedWords;
               widget.controller.text = _lastWords;

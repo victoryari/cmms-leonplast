@@ -7,13 +7,13 @@ class SignaturePadWidget extends StatefulWidget {
   final Function(String base64Png) onSigned;
 
   const SignaturePadWidget({
-    Key? key,
+    super.key,
     required this.title,
     required this.onSigned,
-  }) : super(key: key);
+  });
 
   @override
-  _SignaturePadWidgetState createState() => _SignaturePadWidgetState();
+  State<SignaturePadWidget> createState() => _SignaturePadWidgetState();
 }
 
 class _SignaturePadWidgetState extends State<SignaturePadWidget> {
@@ -85,6 +85,7 @@ class _SignaturePadWidgetState extends State<SignaturePadWidget> {
                     if (bytes != null) {
                       final base64String = 'data:image/png;base64,${base64Encode(bytes)}';
                       widget.onSigned(base64String);
+                      if (!context.mounted) return;
                       Navigator.pop(context);
                     }
                   } else {

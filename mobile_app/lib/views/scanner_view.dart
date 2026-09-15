@@ -5,10 +5,10 @@ import 'package:nfc_manager/nfc_manager.dart';
 class ScannerView extends StatefulWidget {
   final Function(String code, String scanType) onCodeScanned;
 
-  const ScannerView({Key? key, required this.onCodeScanned}) : super(key: key);
+  const ScannerView({super.key, required this.onCodeScanned});
 
   @override
-  _ScannerViewState createState() => _ScannerViewState();
+  State<ScannerView> createState() => _ScannerViewState();
 }
 
 class _ScannerViewState extends State<ScannerView> {
@@ -23,6 +23,7 @@ class _ScannerViewState extends State<ScannerView> {
 
   void _initNfc() async {
     bool isAvailable = await NfcManager.instance.isAvailable();
+    if (!mounted) return;
     setState(() => _nfcAvailable = isAvailable);
 
     if (isAvailable) {
@@ -40,6 +41,7 @@ class _ScannerViewState extends State<ScannerView> {
         _scanned = true;
         NfcManager.instance.stopSession();
         widget.onCodeScanned(nfcCode, 'NFC');
+        if (!mounted) return;
         Navigator.pop(context);
       });
     }
@@ -73,6 +75,7 @@ class _ScannerViewState extends State<ScannerView> {
                 if (barcode.rawValue != null) {
                   _scanned = true;
                   widget.onCodeScanned(barcode.rawValue!, 'BARCODE_QR');
+                  if (!mounted) return;
                   Navigator.pop(context);
                   break;
                 }

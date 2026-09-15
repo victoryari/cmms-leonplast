@@ -13,7 +13,7 @@ void main() async {
 }
 
 class CmmsApp extends StatelessWidget {
-  const CmmsApp({Key? key}) : super(key: key);
+  const CmmsApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -35,16 +35,16 @@ class CmmsApp extends StatelessWidget {
 }
 
 class WorkOrdersListView extends StatefulWidget {
-  const WorkOrdersListView({Key? key}) : super(key: key);
+  const WorkOrdersListView({super.key});
 
   @override
-  _WorkOrdersListViewState createState() => _WorkOrdersListViewState();
+  State<WorkOrdersListView> createState() => _WorkOrdersListViewState();
 }
 
 class _WorkOrdersListViewState extends State<WorkOrdersListView> {
   List<Map<String, dynamic>> _workOrders = [];
   bool _isLoading = true;
-  String _authToken = 'DEMO_TOKEN';
+  final String _authToken = 'DEMO_TOKEN';
 
   @override
   void initState() {
@@ -57,6 +57,7 @@ class _WorkOrdersListViewState extends State<WorkOrdersListView> {
     setState(() => _isLoading = true);
     // Cargar OTs usando SyncService (Offline First SQLite)
     final ots = await SyncService.instance.pullDeltaSync(_authToken);
+    if (!mounted) return;
     setState(() {
       _workOrders = ots;
       _isLoading = false;
@@ -128,7 +129,6 @@ class _WorkOrdersListViewState extends State<WorkOrdersListView> {
   }
 
   Widget _buildWorkOrderCard(Map<String, dynamic> ot) {
-    final String estado = ot['estado'] ?? 'Pendiente';
     final bool requierePts = (ot['requiere_permiso_especial'] == 1 || ot['requiere_permiso_especial'] == true);
 
     return Card(
@@ -265,6 +265,7 @@ class _WorkOrdersListViewState extends State<WorkOrdersListView> {
                         },
                       );
 
+                      if (!context.mounted) return;
                       Navigator.pop(context);
                       _loadWorkOrders();
                       ScaffoldMessenger.of(context).showSnackBar(

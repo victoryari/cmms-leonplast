@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -31,7 +32,7 @@ class SyncService {
       // 2. Pull de cambios Delta desde Laravel
       await pullDeltaSync(authToken);
     } catch (e) {
-      print('Error durante ciclo de sincronización: $e');
+      debugPrint('Error durante ciclo de sincronización: $e');
     } finally {
       isSyncing = false;
     }
@@ -74,7 +75,7 @@ class SyncService {
           await DatabaseHelper.instance.deleteFromQueue(itemId);
         }
       } catch (e) {
-        print('Fallo al procesar item $itemId de la cola offline: $e');
+        debugPrint('Fallo al procesar item $itemId de la cola offline: $e');
       }
     }
   }
@@ -109,7 +110,7 @@ class SyncService {
         return await DatabaseHelper.instance.getLocalWorkOrders();
       }
     } catch (e) {
-      print('Sin conexión al servidor. Cargando OTs desde SQLite local.');
+      debugPrint('Sin conexión al servidor. Cargando OTs desde SQLite local.');
     }
 
     // Retornar OTs almacenadas en el teléfono si no hay red
