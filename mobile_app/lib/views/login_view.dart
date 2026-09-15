@@ -67,7 +67,7 @@ class _LoginViewState extends State<LoginView> {
               ),
               const SizedBox(height: 6),
               const Text(
-                'Ingreso de Técnicos & Personal de Planta',
+                'Ingreso de Técnicos & Personal de Mantenimiento',
                 style: TextStyle(fontSize: 12, color: Colors.white54),
               ),
               const SizedBox(height: 32),
