@@ -9,8 +9,72 @@ class SyncService {
   static final SyncService instance = SyncService._init();
   SyncService._init();
 
-  final String baseUrl = 'http://10.0.2.2:8000/api/v1'; // IP de emulador o servidor local (127.0.0.1 en dispositivo físico)
+  /// URL Base Dinámica según plataforma (Navegador Web Chrome o Emulador Android)
+  String get baseUrl => kIsWeb ? 'http://localhost:8000/api/v1' : 'http://10.0.2.2:8000/api/v1';
+
   bool isSyncing = false;
+
+  /// Autenticar técnico mediante API REST de Laravel
+  Future<bool> login(String email, String password) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/login'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode({
+          'email': email,
+          'password': password,
+          'device_name': kIsWeb ? 'chrome-web-app' : 'android-flutter-app',
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          final token = data['token'];
+          final user = data['user'] ?? {};
+
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('auth_token', token);
+          await prefs.setString('user_name', user['nombre_completo'] ?? user['email'] ?? 'Técnico');
+          await prefs.setString('user_email', user['email'] ?? '');
+          await prefs.setString('user_role', user['rol'] ?? 'Tecnico');
+
+          // Ejecutar sincronización inicial tras login
+          await processSyncCycle(token);
+          return true;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error en login API: $e');
+    }
+    return false;
+  }
+
+  /// Verificar si existe token guardado
+  Future<String?> getAuthToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('auth_token');
+  }
+
+  /// Obtener nombre del usuario activo
+  Future<String> getUserName() async {
+    final prefs = await SharedPreferences.getInstance();
+    final name = prefs.getString('user_name') ?? 'Técnico';
+    final role = prefs.getString('user_role') ?? 'Tecnico';
+    return '$name ($role)';
+  }
+
+  /// Cerrar sesión
+  Future<void> logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('auth_token');
+    await prefs.remove('user_name');
+    await prefs.remove('user_role');
+    await prefs.remove('last_sync_timestamp');
+  }
 
   /// Inicializar el escuchador de conectividad a la red
   void initConnectivityListener(String authToken) {

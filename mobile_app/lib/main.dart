@@ -7,6 +7,7 @@ import 'services/sync_service.dart';
 import 'widgets/voice_text_field.dart';
 import 'widgets/signature_pad.dart';
 import 'views/scanner_view.dart';
+import 'views/login_view.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -42,13 +43,64 @@ class CmmsApp extends StatelessWidget {
           surface: Color(0xFF1E293B),
         ),
       ),
-      home: const WorkOrdersListView(),
+      home: const AuthWrapper(),
+    );
+  }
+}
+
+class AuthWrapper extends StatefulWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
+  bool _checkingAuth = true;
+  String? _authToken;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkSession();
+  }
+
+  Future<void> _checkSession() async {
+    final token = await SyncService.instance.getAuthToken();
+    if (!mounted) return;
+    setState(() {
+      _authToken = token;
+      _checkingAuth = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_checkingAuth) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator(color: Colors.cyan)),
+      );
+    }
+
+    if (_authToken == null || _authToken!.isEmpty) {
+      return LoginView(
+        onLoginSuccess: _checkSession,
+      );
+    }
+
+    return WorkOrdersListView(
+      onLogout: () async {
+        await SyncService.instance.logout();
+        _checkSession();
+      },
     );
   }
 }
 
 class WorkOrdersListView extends StatefulWidget {
-  const WorkOrdersListView({super.key});
+  final VoidCallback onLogout;
+
+  const WorkOrdersListView({super.key, required this.onLogout});
 
   @override
   State<WorkOrdersListView> createState() => _WorkOrdersListViewState();
@@ -57,19 +109,28 @@ class WorkOrdersListView extends StatefulWidget {
 class _WorkOrdersListViewState extends State<WorkOrdersListView> {
   List<Map<String, dynamic>> _workOrders = [];
   bool _isLoading = true;
-  final String _authToken = 'DEMO_TOKEN';
+  String _userName = 'Cargando usuario...';
+  String? _token;
 
   @override
   void initState() {
     super.initState();
-    _loadWorkOrders();
-    SyncService.instance.initConnectivityListener(_authToken);
+    _initAppSession();
+  }
+
+  Future<void> _initAppSession() async {
+    _token = await SyncService.instance.getAuthToken();
+    _userName = await SyncService.instance.getUserName();
+    if (_token != null) {
+      SyncService.instance.initConnectivityListener(_token!);
+      await _loadWorkOrders();
+    }
   }
 
   Future<void> _loadWorkOrders() async {
+    if (_token == null) return;
     setState(() => _isLoading = true);
-    // Cargar OTs usando SyncService (Offline First SQLite)
-    final ots = await SyncService.instance.pullDeltaSync(_authToken);
+    final ots = await SyncService.instance.pullDeltaSync(_token!);
     if (!mounted) return;
     setState(() {
       _workOrders = ots;
@@ -81,11 +142,18 @@ class _WorkOrdersListViewState extends State<WorkOrdersListView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('OTs en Planta (Offline First)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('OTs Asignadas (Offline)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            Text(_userName, style: const TextStyle(fontSize: 11, color: Colors.cyanAccent)),
+          ],
+        ),
         backgroundColor: const Color(0xFF1E293B),
         actions: [
           IconButton(
             icon: const Icon(Icons.qr_code_scanner, color: Colors.cyanAccent),
+            tooltip: 'Escanear QR/NFC',
             onPressed: () {
               Navigator.push(
                 context,
@@ -103,7 +171,13 @@ class _WorkOrdersListViewState extends State<WorkOrdersListView> {
           ),
           IconButton(
             icon: const Icon(Icons.sync, color: Colors.white),
+            tooltip: 'Sincronizar ahora',
             onPressed: _loadWorkOrders,
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.redAccent),
+            tooltip: 'Cerrar Sesión',
+            onPressed: widget.onLogout,
           ),
         ],
       ),
@@ -129,7 +203,7 @@ class _WorkOrdersListViewState extends State<WorkOrdersListView> {
         children: [
           const Icon(Icons.build_circle_outlined, size: 64, color: Colors.white24),
           const SizedBox(height: 12),
-          const Text('No hay Órdenes de Trabajo asignadas', style: TextStyle(color: Colors.white54, fontSize: 14)),
+          const Text('No hay Órdenes de Trabajo asignadas a este técnico', style: TextStyle(color: Colors.white54, fontSize: 13)),
           const SizedBox(height: 16),
           ElevatedButton.icon(
             onPressed: _loadWorkOrders,
