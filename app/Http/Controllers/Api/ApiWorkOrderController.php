@@ -70,10 +70,15 @@ class ApiWorkOrderController extends Controller
     public function sync(Request $request)
     {
         $user = $request->user();
-        $validated = $request->validate([
-            'since' => ['nullable', 'date_format:Y-m-d H:i:s'],
-        ]);
-        $since = $validated['since'] ?? null;
+        $sinceInput = $request->input('since');
+        $since = null;
+
+        if ($sinceInput) {
+            $timestamp = strtotime($sinceInput);
+            if ($timestamp !== false) {
+                $since = date('Y-m-d H:i:s', $timestamp);
+            }
+        }
 
         $query = WorkOrder::with([
             'activo', 'solicitante', 'supervisor', 'tecnico', 
@@ -87,7 +92,7 @@ class ApiWorkOrderController extends Controller
         }
 
         if ($since) {
-            $query->where('updated_at', '>=', date('Y-m-d H:i:s', strtotime($since)));
+            $query->where('updated_at', '>=', $since);
         }
 
         $modifiedWorkOrders = $query->orderBy('updated_at', 'asc')->get();

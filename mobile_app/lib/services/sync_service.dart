@@ -150,7 +150,7 @@ class SyncService {
     final String? lastSync = prefs.getString('last_sync_timestamp');
 
     final String url = (lastSync != null && lastSync.isNotEmpty)
-        ? '$baseUrl/ordenes-trabajo/sync?since=$lastSync'
+        ? '$baseUrl/ordenes-trabajo/sync?since=${Uri.encodeComponent(lastSync)}'
         : '$baseUrl/ordenes-trabajo/sync';
 
     try {
