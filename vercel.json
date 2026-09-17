@@ -25,6 +25,18 @@
             "dest": "/robots.txt"
         },
         {
+            "src": "/manifest.json",
+            "dest": "/manifest.json"
+        },
+        {
+            "src": "/service-worker.js",
+            "dest": "/service-worker.js"
+        },
+        {
+            "src": "/offline.html",
+            "dest": "/offline.html"
+        },
+        {
             "src": "/(.*)",
             "dest": "/api/index.php"
         }
