@@ -41,7 +41,29 @@ class Role extends Model
             return false;
         }
 
-        return !empty($permisos[$modulo][$accion]);
+        if (!empty($permisos[$modulo][$accion])) {
+            return true;
+        }
+
+        // Mapeo flexible para usuarios_roles
+        if ($modulo === 'usuarios_roles') {
+            if ($accion === 'ver' && (!empty($permisos['usuarios_roles']['crear_usuarios']) || !empty($permisos['usuarios_roles']['editar_usuarios']) || !empty($permisos['usuarios_roles']['gestionar_roles']))) {
+                return true;
+            }
+            if (($accion === 'crear_usuarios' || $accion === 'editar_usuarios') && !empty($permisos['usuarios_roles']['ver'])) {
+                return true;
+            }
+        }
+
+        if ($accion === 'ver' && isset($permisos[$modulo]) && is_array($permisos[$modulo])) {
+            foreach ($permisos[$modulo] as $act => $val) {
+                if ($val) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /**

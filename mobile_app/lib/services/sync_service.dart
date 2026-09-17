@@ -9,8 +9,13 @@ class SyncService {
   static final SyncService instance = SyncService._init();
   SyncService._init();
 
-  /// URL Base Dinámica según plataforma (Navegador Web Chrome o Emulador Android)
-  String get baseUrl => kIsWeb ? 'http://localhost:8000/api/v1' : 'http://10.0.2.2:8000/api/v1';
+  /// URL Base Dinámica según plataforma y entorno (Release/Producción o Debug/Desarrollo)
+  String get baseUrl {
+    if (kReleaseMode) {
+      return 'https://cmms-leonplast-5he3-ochre.vercel.app/api/v1';
+    }
+    return kIsWeb ? 'http://localhost:8000/api/v1' : 'http://10.0.2.2:8000/api/v1';
+  }
 
   bool isSyncing = false;
 

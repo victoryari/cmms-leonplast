@@ -63,17 +63,12 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * Política de contraseñas fuerte y uniforme en toda la aplicación.
+     * Permite cualquier contraseña sin exigencias de caracteres especiales, mayúsculas ni filtraciones.
      */
     protected function configurePasswordDefaults(): void
     {
         Password::defaults(function () {
-            return Password::min(8)
-                ->letters()
-                ->mixedCase()
-                ->numbers()
-                ->symbols()
-                ->uncompromised();
+            return Password::min(4);
         });
     }
 }

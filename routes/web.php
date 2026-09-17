@@ -75,6 +75,15 @@ Route::middleware('auth')->group(function () {
     Route::put('/terceros/{id}', [\App\Http\Controllers\SupplierController::class, 'update'])->name('terceros.update');
     Route::delete('/terceros/{id}', [\App\Http\Controllers\SupplierController::class, 'destroy'])->name('terceros.destroy');
 
+    // Módulo de Recursos Humanos (Personal & Trabajadores de Planta) - Catálogos
+    Route::get('/recursos-humanos', [\App\Http\Controllers\EmployeeController::class, 'index'])->name('recursos-humanos.index');
+    Route::get('/recursos-humanos/crear', [\App\Http\Controllers\EmployeeController::class, 'create'])->name('recursos-humanos.create');
+    Route::post('/recursos-humanos', [\App\Http\Controllers\EmployeeController::class, 'store'])->name('recursos-humanos.store');
+    Route::get('/recursos-humanos/{id}', [\App\Http\Controllers\EmployeeController::class, 'show'])->name('recursos-humanos.show')->where('id', '[0-9]+');
+    Route::get('/recursos-humanos/{id}/editar', [\App\Http\Controllers\EmployeeController::class, 'edit'])->name('recursos-humanos.edit')->where('id', '[0-9]+');
+    Route::put('/recursos-humanos/{id}', [\App\Http\Controllers\EmployeeController::class, 'update'])->name('recursos-humanos.update')->where('id', '[0-9]+');
+    Route::delete('/recursos-humanos/{id}', [\App\Http\Controllers\EmployeeController::class, 'destroy'])->name('recursos-humanos.destroy')->where('id', '[0-9]+');
+
     // Módulo de Ubicaciones & Sedes (Lima & Provincias) - Catálogos
     Route::get('/ubicaciones', [\App\Http\Controllers\LocationController::class, 'index'])->name('ubicaciones.index');
     Route::get('/ubicaciones/crear', [\App\Http\Controllers\LocationController::class, 'create'])->name('ubicaciones.create');
@@ -175,15 +184,19 @@ Route::middleware('auth')->group(function () {
     });
 
     // Módulo de Gestión de Usuarios & Personal de Planta
-    Route::middleware('permission:usuarios_roles,ver')->group(function () {
-        Route::get('/usuarios', [UserController::class, 'index'])->name('usuarios.index');
+    Route::middleware('permission:usuarios_roles,crear_usuarios')->group(function () {
         Route::get('/usuarios/crear', [UserController::class, 'create'])->name('usuarios.create');
         Route::post('/usuarios', [UserController::class, 'store'])->name('usuarios.store');
-        Route::get('/usuarios/{id}', [UserController::class, 'show'])->name('usuarios.show');
-        Route::get('/usuarios/{id}/editar', [UserController::class, 'edit'])->name('usuarios.edit');
-        Route::put('/usuarios/{id}', [UserController::class, 'update'])->name('usuarios.update');
-        Route::post('/usuarios/{id}/toggle-status', [UserController::class, 'toggleStatus'])->name('usuarios.toggle-status');
-        Route::post('/usuarios/{id}/restablecer-clave', [UserController::class, 'resetPassword'])->name('usuarios.reset-password');
+    });
+    Route::middleware('permission:usuarios_roles,ver')->group(function () {
+        Route::get('/usuarios', [UserController::class, 'index'])->name('usuarios.index');
+        Route::get('/usuarios/{id}', [UserController::class, 'show'])->name('usuarios.show')->where('id', '[0-9]+');
+    });
+    Route::middleware('permission:usuarios_roles,editar_usuarios')->group(function () {
+        Route::get('/usuarios/{id}/editar', [UserController::class, 'edit'])->name('usuarios.edit')->where('id', '[0-9]+');
+        Route::put('/usuarios/{id}', [UserController::class, 'update'])->name('usuarios.update')->where('id', '[0-9]+');
+        Route::post('/usuarios/{id}/toggle-status', [UserController::class, 'toggleStatus'])->name('usuarios.toggle-status')->where('id', '[0-9]+');
+        Route::post('/usuarios/{id}/restablecer-clave', [UserController::class, 'resetPassword'])->name('usuarios.reset-password')->where('id', '[0-9]+');
     });
 
     // Gestión Granular de Roles y Matriz de Permisos
