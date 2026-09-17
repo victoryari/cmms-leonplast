@@ -129,7 +129,17 @@ foreach ($envOverrides as $key => $value) {
 }
 
 // ============================================================
-// PASO 4: Ejecutar la aplicación Laravel
+// PASO 4: Normalizar REQUEST_URI para Serverless Vercel
+// ============================================================
+if (isset($_SERVER['REQUEST_URI'])) {
+    $requestUri = $_SERVER['REQUEST_URI'];
+    if (str_starts_with($requestUri, '/v1/')) {
+        $_SERVER['REQUEST_URI'] = '/api' . $requestUri;
+    }
+}
+
+// ============================================================
+// PASO 5: Ejecutar la aplicación Laravel
 // ============================================================
 try {
     require __DIR__ . '/../public/index.php';
