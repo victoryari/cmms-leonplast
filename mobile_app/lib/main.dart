@@ -3,7 +3,9 @@ import 'package:flutter/foundation.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 import 'package:image_picker/image_picker.dart';
+import 'dart:async';
 import 'dart:convert';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'services/database_helper.dart';
 import 'services/sync_service.dart';
 import 'widgets/voice_text_field.dart';
@@ -111,13 +113,35 @@ class WorkOrdersListView extends StatefulWidget {
 class _WorkOrdersListViewState extends State<WorkOrdersListView> {
   List<Map<String, dynamic>> _workOrders = [];
   bool _isLoading = true;
+  bool _isOnline = true;
+  int _pendingQueueCount = 0;
   String _userName = 'Cargando usuario...';
   String? _token;
+  StreamSubscription? _connectivitySubscription;
 
   @override
   void initState() {
     super.initState();
     _initAppSession();
+    _listenConnectivity();
+  }
+
+  @override
+  void dispose() {
+    _connectivitySubscription?.cancel();
+    super.dispose();
+  }
+
+  void _listenConnectivity() {
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((results) async {
+      bool hasNet = results.any((r) => r != ConnectivityResult.none);
+      if (mounted) {
+        setState(() => _isOnline = hasNet);
+      }
+      if (hasNet && _token != null) {
+        await _loadWorkOrders();
+      }
+    });
   }
 
   Future<void> _initAppSession() async {
@@ -132,7 +156,19 @@ class _WorkOrdersListViewState extends State<WorkOrdersListView> {
   Future<void> _loadWorkOrders() async {
     if (_token == null) return;
     setState(() => _isLoading = true);
-    final ots = await SyncService.instance.pullDeltaSync(_token!);
+
+    _isOnline = await SyncService.instance.isNetworkAvailable();
+
+    if (_isOnline) {
+      // 1. Flush cola offline + pull delta en tiempo real
+      await SyncService.instance.processSyncCycle(_token!);
+    } else {
+      await SyncService.instance.pullDeltaSync(_token!);
+    }
+
+    _pendingQueueCount = await DatabaseHelper.instance.getPendingQueueCount();
+    final ots = await DatabaseHelper.instance.getLocalWorkOrders();
+
     if (!mounted) return;
     setState(() {
       _workOrders = ots;
@@ -147,7 +183,24 @@ class _WorkOrdersListViewState extends State<WorkOrdersListView> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('OTs Asignadas (Offline)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            Row(
+              children: [
+                Icon(
+                  _isOnline ? Icons.wifi : Icons.wifi_off,
+                  size: 14,
+                  color: _isOnline ? Colors.greenAccent : Colors.orangeAccent,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  _isOnline
+                      ? (_pendingQueueCount > 0
+                          ? 'OTs Asignadas ($_pendingQueueCount pend. enviando)'
+                          : 'OTs Asignadas (En línea ✓)')
+                      : 'OTs Asignadas ($_pendingQueueCount offline)',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+              ],
+            ),
             Text(_userName, style: const TextStyle(fontSize: 11, color: Colors.cyanAccent)),
           ],
         ),
@@ -173,8 +226,13 @@ class _WorkOrdersListViewState extends State<WorkOrdersListView> {
           ),
           IconButton(
             icon: const Icon(Icons.sync, color: Colors.white),
-            tooltip: 'Sincronizar ahora',
-            onPressed: _loadWorkOrders,
+            tooltip: 'Sincronizar ahora con Servidor Central',
+            onPressed: () async {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('🔄 Sincronizando datos con servidor central...'), duration: Duration(seconds: 1)),
+              );
+              await _loadWorkOrders();
+            },
           ),
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.redAccent),
@@ -187,13 +245,18 @@ class _WorkOrdersListViewState extends State<WorkOrdersListView> {
           ? const Center(child: CircularProgressIndicator(color: Colors.cyan))
           : _workOrders.isEmpty
               ? _buildEmptyState()
-              : ListView.builder(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: _workOrders.length,
-                  itemBuilder: (context, index) {
-                    final ot = _workOrders[index];
-                    return _buildWorkOrderCard(ot);
-                  },
+              : RefreshIndicator(
+                  onRefresh: _loadWorkOrders,
+                  color: Colors.cyan,
+                  backgroundColor: const Color(0xFF1E293B),
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: _workOrders.length,
+                    itemBuilder: (context, index) {
+                      final ot = _workOrders[index];
+                      return _buildWorkOrderCard(ot);
+                    },
+                  ),
                 ),
     );
   }
@@ -226,6 +289,9 @@ class _WorkOrdersListViewState extends State<WorkOrdersListView> {
     if (estado == 'En_Progreso' || estado == 'En_Proceso') {
       estadoColor = Colors.cyanAccent;
       estadoTexto = 'En Proceso ⚙️';
+    } else if (estado == 'Aprobada') {
+      estadoColor = Colors.blueAccent;
+      estadoTexto = 'Asignada (Aprobada)';
     } else if (estado == 'En_Pausa') {
       estadoColor = Colors.orangeAccent;
       estadoTexto = 'En Pausa ⏸️';

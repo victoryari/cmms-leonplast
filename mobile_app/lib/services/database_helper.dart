@@ -97,10 +97,19 @@ class DatabaseHelper {
     return await db.delete('sync_queue', where: 'id = ?', whereArgs: [id]);
   }
 
+  Future<int> getPendingQueueCount() async {
+    final db = await instance.database;
+    final result = await db.rawQuery('SELECT COUNT(*) as count FROM sync_queue');
+    return Sqflite.firstIntValue(result) ?? 0;
+  }
+
   // --- MÉTODOS DE MANEJO DE OTS EN LOCAL ---
 
-  Future<void> saveLocalWorkOrders(List<dynamic> workOrders) async {
+  Future<void> saveLocalWorkOrders(List<dynamic> workOrders, {bool clearExisting = false}) async {
     final db = await instance.database;
+    if (clearExisting) {
+      await db.delete('local_work_orders');
+    }
     final batch = db.batch();
 
     for (var ot in workOrders) {

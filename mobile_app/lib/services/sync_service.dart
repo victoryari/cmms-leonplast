@@ -81,6 +81,16 @@ class SyncService {
     await prefs.remove('last_sync_timestamp');
   }
 
+  /// Verificar si el dispositivo cuenta con conexión activa a internet
+  Future<bool> isNetworkAvailable() async {
+    try {
+      final results = await Connectivity().checkConnectivity();
+      return results.any((r) => r != ConnectivityResult.none);
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Inicializar el escuchador de conectividad a la red
   void initConnectivityListener(String authToken) {
     Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> results) async {
@@ -93,12 +103,13 @@ class SyncService {
 
   /// Ciclo completo de Sincronización (Outbox Flush + Delta Sync Pull)
   Future<void> processSyncCycle(String authToken) async {
+    if (isSyncing) return;
     isSyncing = true;
     try {
-      // 1. Flush de la cola de acciones capturadas offline
+      // 1. Intentar vaciar la cola outbox capturada en offline hacia Laravel
       await flushOutboxQueue(authToken);
 
-      // 2. Pull de cambios Delta desde Laravel
+      // 2. Descargar cambios Delta actualizados desde Laravel a SQLite
       await pullDeltaSync(authToken);
     } catch (e) {
       debugPrint('Error durante ciclo de sincronización: $e');
@@ -142,19 +153,23 @@ class SyncService {
         if (response.statusCode >= 200 && response.statusCode < 300) {
           // Procesado exitosamente en el servidor central -> Eliminar de la cola local
           await DatabaseHelper.instance.deleteFromQueue(itemId);
+        } else if (response.statusCode >= 400 && response.statusCode < 500) {
+          // Respuesta 4xx (Error de validación 422, No encontrado 404, etc.) -> Eliminar para no atascar la cola
+          debugPrint('Item $itemId rechazado por servidor (HTTP ${response.statusCode}). Descartando de cola outbox.');
+          await DatabaseHelper.instance.deleteFromQueue(itemId);
         }
       } catch (e) {
-        debugPrint('Fallo al procesar item $itemId de la cola offline: $e');
+        debugPrint('Fallo de conexión al procesar item $itemId de la cola offline: $e');
       }
     }
   }
 
-  /// Descargar cambios delta desde Laravel desde la última fecha registrada
-  Future<List<Map<String, dynamic>>> pullDeltaSync(String authToken) async {
+  /// Descargar cambios desde Laravel (Trae todas las OTs activas del técnico para sincronización garantizada)
+  Future<List<Map<String, dynamic>>> pullDeltaSync(String authToken, {bool forceFullSync = true}) async {
     final prefs = await SharedPreferences.getInstance();
     final String? lastSync = prefs.getString('last_sync_timestamp');
 
-    final String url = (lastSync != null && lastSync.isNotEmpty)
+    final String url = (!forceFullSync && lastSync != null && lastSync.isNotEmpty)
         ? '$baseUrl/ordenes-trabajo/sync?since=${Uri.encodeComponent(lastSync)}'
         : '$baseUrl/ordenes-trabajo/sync';
 
@@ -172,8 +187,8 @@ class SyncService {
         final List<dynamic> serverOts = data['data'] ?? [];
         final String newTimestamp = data['server_timestamp'] ?? DateTime.now().toIso8601String();
 
-        // Guardar en la base de datos local SQLite
-        await DatabaseHelper.instance.saveLocalWorkOrders(serverOts);
+        // Guardar en la base de datos local SQLite reemplazando datos obsoletos
+        await DatabaseHelper.instance.saveLocalWorkOrders(serverOts, clearExisting: true);
         await prefs.setString('last_sync_timestamp', newTimestamp);
 
         return await DatabaseHelper.instance.getLocalWorkOrders();
