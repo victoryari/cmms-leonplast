@@ -47,10 +47,10 @@
                     </div>
 
                     <div>
-                        <label for="parent_id" class="block text-xs font-semibold text-slate-300 mb-1">Ubicación / Activo Padre (Árbol Jerárquico)</label>
+                        <label for="parent_id" class="block text-xs font-semibold text-slate-300 mb-1">Activo Padre / Equipo Superior (Jerarquía)</label>
                         <select id="parent_id" name="parent_id" 
                                 class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500">
-                            <option value="">Sin Padre (Nodo Raíz / Planta)</option>
+                            <option value="">Sin Padre (Equipo Raíz Principal)</option>
                             @foreach($activosPadres ?? [] as $padre)
                             <option value="{{ $padre->id }}" {{ old('parent_id', $activo->parent_id) == $padre->id ? 'selected' : '' }}>
                                 [{{ $padre->tipo_clasificacion }}] {{ $padre->nombre }} ({{ $padre->codigo_activo }})
