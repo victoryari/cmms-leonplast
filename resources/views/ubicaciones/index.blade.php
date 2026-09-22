@@ -148,6 +148,29 @@
                     </div>
                 </div>
 
+                <!-- Activos Directos de la Sede Principal -->
+                @if($nodoRaiz->activos->count() > 0)
+                <div class="ml-6 pl-4 border-l-2 border-cyan-500/30 space-y-2 pt-1">
+                    <span class="text-[10px] font-bold text-cyan-400 uppercase tracking-wider block">📦 Activos Asignados a la Sede ({{ $nodoRaiz->activos->count() }}):</span>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                        @foreach($nodoRaiz->activos as $actRaiz)
+                        <a href="{{ route('activos.show', $actRaiz->id) }}" class="flex items-center justify-between p-2 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-cyan-500/50 transition group">
+                            <div class="flex items-center space-x-2 truncate">
+                                <span class="text-xs">
+                                    @if($actRaiz->tipo_clasificacion == 'Equipo') ⚙️ 
+                                    @elseif($actRaiz->tipo_clasificacion == 'Herramienta') 🔧 
+                                    @elseif($actRaiz->tipo_clasificacion == 'Digital') 💻 
+                                    @else 📦 @endif
+                                </span>
+                                <span class="text-xs font-bold text-slate-200 group-hover:text-cyan-400 transition truncate">{{ $actRaiz->nombre }}</span>
+                            </div>
+                            <span class="font-mono text-[10px] text-cyan-400 font-semibold ml-2 shrink-0">{{ $actRaiz->codigo_activo }}</span>
+                        </a>
+                        @endforeach
+                    </div>
+                </div>
+                @endif
+
                 <!-- Sub-ubicaciones de Nivel 1 -->
                 @if($nodoRaiz->children->count() > 0)
                 <div class="ml-6 pl-4 border-l-2 border-slate-800 space-y-2 pt-2">
@@ -165,7 +188,7 @@
                             </div>
                             <div class="flex items-center space-x-2">
                                 <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
-                                    {{ $hijo->activos->count() }} Activos
+                                    📦 {{ $hijo->activos->count() }} Activos
                                 </span>
                                 <a href="{{ route('ubicaciones.show', $hijo->id) }}" class="text-xs text-cyan-400 hover:underline">
                                     Detalle ➔
@@ -173,21 +196,61 @@
                             </div>
                         </div>
 
+                        <!-- Activos instalados en esta Sub-Ubicación -->
+                        @if($hijo->activos->count() > 0)
+                        <div class="ml-6 pl-3 border-l-2 border-blue-500/30 space-y-1.5 pt-1">
+                            <span class="text-[10px] font-bold text-blue-300 uppercase tracking-wider block">📦 Activos Instalados en esta Ubicación ({{ $hijo->activos->count() }}):</span>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                                @foreach($hijo->activos as $actHijo)
+                                <a href="{{ route('activos.show', $actHijo->id) }}" class="flex items-center justify-between p-2 rounded-xl bg-slate-950/80 border border-slate-800/80 hover:border-blue-400/50 transition group">
+                                    <div class="flex items-center space-x-2 truncate">
+                                        <span class="text-xs">
+                                            @if($actHijo->tipo_clasificacion == 'Equipo') ⚙️ 
+                                            @elseif($actHijo->tipo_clasificacion == 'Herramienta') 🔧 
+                                            @elseif($actHijo->tipo_clasificacion == 'Digital') 💻 
+                                            @else 📦 @endif
+                                        </span>
+                                        <span class="text-xs font-bold text-slate-200 group-hover:text-blue-300 transition truncate">{{ $actHijo->nombre }}</span>
+                                    </div>
+                                    <span class="font-mono text-[10px] text-cyan-400 font-semibold ml-2 shrink-0">{{ $actHijo->codigo_activo }}</span>
+                                </a>
+                                @endforeach
+                            </div>
+                        </div>
+                        @endif
+
                         <!-- Sub-ubicaciones de Nivel 2 -->
                         @if($hijo->children->count() > 0)
-                        <div class="ml-6 pl-3 border-l-2 border-slate-800/60 space-y-1.5">
+                        <div class="ml-6 pl-3 border-l-2 border-slate-800/60 space-y-2 pt-1">
                             @foreach($hijo->children as $nieto)
-                            <div class="flex items-center justify-between p-2 rounded-lg bg-slate-950/40 text-xs">
-                                <div class="flex items-center space-x-2">
-                                    <span class="text-slate-400">📌</span>
-                                    <a href="{{ route('ubicaciones.show', $nieto->id) }}" class="text-slate-300 hover:text-white font-medium">
-                                        {{ $nieto->nombre }}
-                                    </a>
-                                    <span class="text-[10px] text-slate-500 font-mono">({{ $nieto->codigo_ubicacion }})</span>
+                            <div class="p-2.5 rounded-lg bg-slate-950/40 border border-slate-850 text-xs space-y-1.5">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="text-slate-400">📌</span>
+                                        <a href="{{ route('ubicaciones.show', $nieto->id) }}" class="text-slate-300 hover:text-white font-medium">
+                                            {{ $nieto->nombre }}
+                                        </a>
+                                        <span class="text-[10px] text-slate-500 font-mono">({{ $nieto->codigo_ubicacion }})</span>
+                                    </div>
+                                    <div class="flex items-center space-x-2">
+                                        <span class="text-[10px] text-slate-400">📦 {{ $nieto->activos->count() }} Activos</span>
+                                        <a href="{{ route('ubicaciones.show', $nieto->id) }}" class="text-[11px] text-cyan-400 hover:underline">
+                                            👁️ Ver
+                                        </a>
+                                    </div>
                                 </div>
-                                <a href="{{ route('ubicaciones.show', $nieto->id) }}" class="text-[11px] text-cyan-400 hover:underline">
-                                    👁️ Ver
-                                </a>
+
+                                <!-- Activos en Nieto -->
+                                @if($nieto->activos->count() > 0)
+                                <div class="ml-4 space-y-1 pt-1 border-t border-slate-850">
+                                    @foreach($nieto->activos as $actNieto)
+                                    <a href="{{ route('activos.show', $actNieto->id) }}" class="flex items-center justify-between p-1.5 rounded-lg bg-slate-900/60 hover:bg-slate-900 text-slate-300">
+                                        <span class="truncate">⚙️ {{ $actNieto->nombre }}</span>
+                                        <span class="font-mono text-[10px] text-cyan-400 shrink-0 ml-2">{{ $actNieto->codigo_activo }}</span>
+                                    </a>
+                                    @endforeach
+                                </div>
+                                @endif
                             </div>
                             @endforeach
                         </div>
