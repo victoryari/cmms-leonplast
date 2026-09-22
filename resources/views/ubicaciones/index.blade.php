@@ -54,7 +54,7 @@
                     </a>
 
                     <div class="border-t border-slate-800 pt-1">
-                        <a href="{{ route('activos.index', ['vista' => 'arbol']) }}" 
+                        <a href="{{ route('ubicaciones.index', ['vista' => 'arbol']) }}" 
                            class="flex items-center space-x-3 px-3 py-2 rounded-xl text-xs font-bold text-cyan-400 hover:bg-cyan-500/10 transition">
                             <span>🗺️ Vista Árbol Jerárquico</span>
                         </a>
@@ -71,7 +71,7 @@
         </a>
     </div>
 
-    <!-- Sub-Barra: Toggle Lista vs Árbol & Breadcrumb (Exacto a la Imagen de Referencia) -->
+    <!-- Sub-Barra: Toggle Lista vs Árbol & Breadcrumb -->
     <div class="p-3 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
         
         <div class="flex items-center space-x-3">
@@ -83,7 +83,7 @@
                     <span>Lista</span>
                 </a>
 
-                <a href="{{ route('activos.index', ['vista' => 'arbol']) }}" 
+                <a href="{{ route('ubicaciones.index', ['vista' => 'arbol']) }}" 
                    class="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs font-bold transition {{ request('vista') == 'arbol' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white' }}">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 10-3 0m3 0h10m0 0a1.5 1.5 0 103 0m-3 0v-6a1.5 1.5 0 10-3 0m3 6v6a1.5 1.5 0 11-3 0"></path></svg>
                     <span>Árbol</span>
@@ -101,6 +101,9 @@
 
         <!-- Mini Filtro de Búsqueda -->
         <form method="GET" action="{{ route('ubicaciones.index') }}" class="flex items-center space-x-2 w-full sm:w-auto">
+            @if(request('vista'))
+            <input type="hidden" name="vista" value="{{ request('vista') }}">
+            @endif
             <input type="text" name="search" value="{{ request('search') }}" placeholder="Filtrar ubicaciones..."
                    class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 w-full sm:w-64">
             <button type="submit" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 border border-slate-700">
@@ -109,7 +112,100 @@
         </form>
     </div>
 
-    <!-- Ubicaciones Data Table (Estructura Fiel a la Imagen de Referencia) -->
+    @if(request('vista') === 'arbol')
+    <!-- Vista Árbol Jerárquico de Sedes y Ubicaciones -->
+    <div class="p-6 rounded-3xl bg-slate-900 border border-slate-800 space-y-4 shadow-2xl">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+            <h3 class="text-sm font-bold text-white uppercase tracking-wider text-cyan-400 flex items-center space-x-2">
+                <span>🗺️ Vista Árbol Jerárquico de Sedes y Ubicaciones</span>
+            </h3>
+            <span class="text-xs text-slate-400">Estructura Sedes Principales ➔ Áreas / Plantas ➔ Sub-ubicaciones</span>
+        </div>
+
+        <div class="space-y-4 font-sans">
+            @forelse($arbolUbicaciones as $nodoRaiz)
+            <div class="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-3">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <span class="p-2 rounded-xl bg-blue-600/20 text-blue-400 border border-blue-500/30 text-sm font-bold">
+                            🏢 {{ $nodoRaiz->tipo_label }}
+                        </span>
+                        <div>
+                            <a href="{{ route('ubicaciones.show', $nodoRaiz->id) }}" class="font-extrabold text-sm text-white hover:text-cyan-400 transition">
+                                {{ $nodoRaiz->nombre }}
+                            </a>
+                            <span class="font-mono text-[11px] text-slate-400 block">{{ $nodoRaiz->codigo_ubicacion }} — {{ $nodoRaiz->ciudad }}, {{ $nodoRaiz->departamento }}</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center space-x-2">
+                        <span class="text-xs px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 font-semibold border border-slate-700">
+                            📦 {{ $nodoRaiz->activos->count() }} Activos asignados
+                        </span>
+                        <a href="{{ route('ubicaciones.show', $nodoRaiz->id) }}" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold border border-slate-700">
+                            Ver Detalle ➔
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Sub-ubicaciones de Nivel 1 -->
+                @if($nodoRaiz->children->count() > 0)
+                <div class="ml-6 pl-4 border-l-2 border-slate-800 space-y-2 pt-2">
+                    @foreach($nodoRaiz->children as $hijo)
+                    <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 hover:border-slate-700 transition space-y-2">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-2.5">
+                                <span class="text-xs">📍</span>
+                                <div>
+                                    <a href="{{ route('ubicaciones.show', $hijo->id) }}" class="font-bold text-xs text-slate-200 hover:text-blue-400 transition">
+                                        {{ $hijo->nombre }}
+                                    </a>
+                                    <span class="font-mono text-[10px] text-slate-400 block">{{ $hijo->codigo_ubicacion }} — {{ $hijo->tipo_label }}</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+                                    {{ $hijo->activos->count() }} Activos
+                                </span>
+                                <a href="{{ route('ubicaciones.show', $hijo->id) }}" class="text-xs text-cyan-400 hover:underline">
+                                    Detalle ➔
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Sub-ubicaciones de Nivel 2 -->
+                        @if($hijo->children->count() > 0)
+                        <div class="ml-6 pl-3 border-l-2 border-slate-800/60 space-y-1.5">
+                            @foreach($hijo->children as $nieto)
+                            <div class="flex items-center justify-between p-2 rounded-lg bg-slate-950/40 text-xs">
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-slate-400">📌</span>
+                                    <a href="{{ route('ubicaciones.show', $nieto->id) }}" class="text-slate-300 hover:text-white font-medium">
+                                        {{ $nieto->nombre }}
+                                    </a>
+                                    <span class="text-[10px] text-slate-500 font-mono">({{ $nieto->codigo_ubicacion }})</span>
+                                </div>
+                                <a href="{{ route('ubicaciones.show', $nieto->id) }}" class="text-[11px] text-cyan-400 hover:underline">
+                                    👁️ Ver
+                                </a>
+                            </div>
+                            @endforeach
+                        </div>
+                        @endif
+                    </div>
+                    @endforeach
+                </div>
+                @endif
+            </div>
+            @empty
+            <div class="py-8 text-center text-slate-500 text-xs">
+                No se encontraron sedes o ubicaciones principales registradas.
+            </div>
+            @endforelse
+        </div>
+    </div>
+    @else
+    <!-- Ubicaciones Data Table -->
     <div class="rounded-3xl bg-slate-900 border border-slate-800 overflow-hidden shadow-2xl">
         <div class="overflow-x-auto">
             <table class="w-full text-left text-xs text-slate-300 border-collapse">
@@ -132,7 +228,7 @@
                     @forelse($ubicaciones as $u)
                     <tr class="hover:bg-slate-800/40 transition group">
                         
-                        <!-- Checkbox + Plus Expand Icon (Igual a la imagen) -->
+                        <!-- Checkbox + Plus Expand Icon -->
                         <td class="py-3 px-3 text-center">
                             <div class="flex items-center space-x-1.5 justify-center">
                                 <input type="checkbox" class="rounded bg-slate-950 border-slate-800 text-blue-600 focus:ring-0">
@@ -196,7 +292,7 @@
                             {{ $u->codigo_postal ?? $u->codigo_ubicacion }}
                         </td>
 
-                        <!-- Acciones: Editar y Eliminar Lógicamente -->
+                        <!-- Acciones -->
                         <td class="py-3 px-4 text-right">
                             <div class="flex items-center justify-end space-x-1.5">
                                 
@@ -212,7 +308,7 @@
                                     ✏️
                                 </a>
 
-                                <!-- Eliminar Lógicamente (Inactivar / Habilitar Toggle) -->
+                                <!-- Eliminar Lógicamente -->
                                 <form action="{{ route('ubicaciones.destroy', $u->id) }}" method="POST" 
                                       onsubmit="return confirm('¿Está seguro de {{ $u->activo ? 'inactivar / eliminar lógicamente' : 'habilitar' }} la ubicación {{ $u->nombre }}?');" class="inline">
                                     @csrf
@@ -243,6 +339,7 @@
         </div>
         @endif
     </div>
+    @endif
 
 </div>
 @endsection

@@ -12,6 +12,12 @@ class ScannerView extends StatefulWidget {
 }
 
 class _ScannerViewState extends State<ScannerView> {
+  final MobileScannerController _scannerController = MobileScannerController(
+    detectionSpeed: DetectionSpeed.noDuplicates,
+    facing: CameraFacing.back,
+    torchEnabled: false,
+  );
+
   bool _nfcAvailable = false;
   bool _scanned = false;
 
@@ -49,6 +55,7 @@ class _ScannerViewState extends State<ScannerView> {
 
   @override
   void dispose() {
+    _scannerController.dispose();
     if (_nfcAvailable) {
       NfcManager.instance.stopSession();
     }
@@ -63,11 +70,68 @@ class _ScannerViewState extends State<ScannerView> {
         title: const Text('Escáner de Activo / Repuesto', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
         backgroundColor: const Color(0xFF1E293B),
         iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          ValueListenableBuilder<MobileScannerState>(
+            valueListenable: _scannerController,
+            builder: (context, state, child) {
+              final isTorchOn = state.torchState == TorchState.on;
+              return IconButton(
+                icon: Icon(
+                  isTorchOn ? Icons.flash_on : Icons.flash_off,
+                  color: isTorchOn ? Colors.amber : Colors.grey,
+                ),
+                onPressed: () => _scannerController.toggleTorch(),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.cameraswitch, color: Colors.white),
+            onPressed: () => _scannerController.switchCamera(),
+          ),
+        ],
       ),
       body: Stack(
         children: [
           // 1. Escáner de Código de Barras / QR por Cámara
           MobileScanner(
+            controller: _scannerController,
+            errorBuilder: (context, error, child) {
+              return Container(
+                color: const Color(0xFF0F172A),
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.no_photography, color: Colors.amber, size: 60),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'No se pudo activar la cámara',
+                          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Verifique que haya otorgado permisos de cámara a la app en Ajustes de Android.\nDetalle: ${error.errorCode}',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.white70, fontSize: 13),
+                        ),
+                        const SizedBox(height: 20),
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.cyan,
+                            foregroundColor: Colors.black,
+                          ),
+                          onPressed: () => _scannerController.start(),
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Reintentar cámara'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
             onDetect: (capture) {
               if (_scanned) return;
               final List<Barcode> barcodes = capture.barcodes;
@@ -83,7 +147,19 @@ class _ScannerViewState extends State<ScannerView> {
             },
           ),
 
-          // 2. Overlay informativo NFC
+          // Overlay guía visual del visor de escaneo
+          Center(
+            child: Container(
+              width: 250,
+              height: 250,
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.cyan, width: 2),
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+          ),
+
+          // 2. Overlay informativo NFC / Cámara
           Positioned(
             bottom: 30,
             left: 20,
@@ -109,13 +185,13 @@ class _ScannerViewState extends State<ScannerView> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          _nfcAvailable ? 'Lector NFC Activo' : 'Escáner de Cámara Activo',
+                          _nfcAvailable ? 'Lector NFC y Cámara Activos' : 'Escáner de Cámara Activo',
                           style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 13),
                         ),
                         Text(
                           _nfcAvailable
-                              ? 'Acerque el reverso del smartphone al tag NFC o enfoque el código QR / Barras.'
-                              : 'Enfoque la etiqueta con código de barras o QR con la cámara.',
+                              ? 'Acerque el teléfono a la etiqueta NFC o enfoque el código QR / Barras dentro del recuadro.'
+                              : 'Enfoque el código de barras o QR dentro del recuadro.',
                           style: const TextStyle(color: Colors.white70, fontSize: 11),
                         ),
                       ],

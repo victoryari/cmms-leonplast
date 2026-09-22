@@ -2,6 +2,14 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Esta aplicación requiere acceso a la cámara para escanear códigos QR y de barras de activos y repuestos.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Esta aplicación requiere acceso al micrófono para el dictado por voz de observaciones.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Esta aplicación requiere reconocimiento de voz para transcribir dictados.</string>
+	<key>NFCReaderUsageDescription</key>
+	<string>Esta aplicación requiere NFC para escanear etiquetas de activos y repuestos.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

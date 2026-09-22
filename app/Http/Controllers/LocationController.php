@@ -32,6 +32,12 @@ class LocationController extends Controller
 
         $ubicaciones = $query->orderBy('id', 'desc')->paginate(12)->withQueryString();
 
+        // Árbol Jerárquico de Ubicaciones (Sedes / Ubicaciones Raíz)
+        $arbolUbicaciones = Location::whereNull('parent_id')
+            ->with(['children.children', 'children.activos', 'activos'])
+            ->orderBy('nombre', 'asc')
+            ->get();
+
         $metrics = [
             'total' => Location::count(),
             'sedes_principales' => Location::where('tipo', 'Sede_Principal')->count(),
@@ -45,7 +51,7 @@ class LocationController extends Controller
             ->whereNotNull('longitud')
             ->get(['id', 'nombre', 'codigo_ubicacion', 'ciudad', 'departamento', 'latitud', 'longitud', 'tipo']);
 
-        return view('ubicaciones.index', compact('ubicaciones', 'metrics', 'mapLocations'));
+        return view('ubicaciones.index', compact('ubicaciones', 'arbolUbicaciones', 'metrics', 'mapLocations'));
     }
 
     public function create()
