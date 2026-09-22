@@ -9,8 +9,11 @@
     <link rel="stylesheet" href="{{ asset('vendor/css/leaflet.css') }}" />
     <script src="{{ asset('vendor/js/leaflet.js') }}"></script>
 
-    <!-- Estilos Personalizados para integrar Popups de Leaflet con CartoDB Dark Matter -->
+    <!-- Estilos Personalizados para integrar Mapa con UI Oscura de CMMS -->
     <style>
+        .leaflet-tile {
+            filter: brightness(0.75) invert(1) contrast(2.2) hue-rotate(200deg) saturate(0.3) !important;
+        }
         .leaflet-popup-content-wrapper {
             background-color: #0f172a !important; /* slate-900 */
             color: #f8fafc !important; /* slate-50 */
@@ -58,6 +61,12 @@
         </div>
 
         <div class="flex items-center space-x-2">
+            @if($ubicacion->latitud && $ubicacion->longitud)
+            <a href="https://www.google.com/maps/search/?api=1&query={{ $ubicacion->latitud }},{{ $ubicacion->longitud }}" target="_blank"
+               class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-lg shadow-blue-600/30 transition">
+                🗺️ Abrir en Google Maps ↗
+            </a>
+            @endif
             <a href="{{ route('ubicaciones.edit', $ubicacion->id) }}" 
                class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 transition">
                 ✏️ Editar Ubicación
@@ -103,8 +112,13 @@
 
                 @if($ubicacion->latitud && $ubicacion->longitud)
                 <div class="space-y-2 pt-2">
-                    <span class="text-xs font-bold text-cyan-400 uppercase">Mapa de Ubicación Exacta</span>
-                    <div id="show-map" class="w-full h-56 rounded-2xl border border-slate-800 z-10"></div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-cyan-400 uppercase">Mapa de Ubicación Exacta</span>
+                        <a href="https://www.google.com/maps/search/?api=1&query={{ $ubicacion->latitud }},{{ $ubicacion->longitud }}" target="_blank" class="text-xs text-blue-400 hover:underline font-bold">
+                            Ver en Google Maps ↗
+                        </a>
+                    </div>
+                    <div id="show-map" class="w-full h-64 rounded-2xl border border-slate-800 z-10 shadow-inner"></div>
                 </div>
                 @endif
             </div>
@@ -156,11 +170,11 @@
 @if($ubicacion->latitud && $ubicacion->longitud)
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const map = L.map('show-map').setView([{{ $ubicacion->latitud }}, {{ $ubicacion->longitud }}], 14);
+        const map = L.map('show-map').setView([{{ $ubicacion->latitud }}, {{ $ubicacion->longitud }}], 15);
 
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            maxZoom: 19,
-            subdomains: 'abcd'
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+            maxZoom: 19
         }).addTo(map);
 
         L.marker([{{ $ubicacion->latitud }}, {{ $ubicacion->longitud }}])

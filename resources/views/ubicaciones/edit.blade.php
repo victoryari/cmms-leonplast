@@ -9,8 +9,11 @@
     <link rel="stylesheet" href="{{ asset('vendor/css/leaflet.css') }}" />
     <script src="{{ asset('vendor/js/leaflet.js') }}"></script>
 
-    <!-- Estilos Personalizados para integrar Popups de Leaflet con CartoDB Dark Matter -->
+    <!-- Estilos Personalizados para integrar Mapa con UI Oscura de CMMS -->
     <style>
+        .leaflet-tile {
+            filter: brightness(0.75) invert(1) contrast(2.2) hue-rotate(200deg) saturate(0.3) !important;
+        }
         .leaflet-popup-content-wrapper {
             background-color: #0f172a !important; /* slate-900 */
             color: #f8fafc !important; /* slate-50 */
@@ -115,6 +118,7 @@
                     <div>
                         <label for="direccion" class="block text-xs font-semibold text-slate-400 mb-1">Dirección Fiscal / Referencia</label>
                         <input type="text" id="direccion" name="direccion" value="{{ old('direccion', $ubicacion->direccion) }}"
+                               onchange="searchAddress()"
                                class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white">
                     </div>
 
@@ -122,11 +126,13 @@
                         <div>
                             <label for="ciudad" class="block text-xs font-semibold text-slate-400 mb-1">Ciudad *</label>
                             <input type="text" id="ciudad" name="ciudad" value="{{ old('ciudad', $ubicacion->ciudad) }}" required
+                                   onchange="searchAddress()"
                                    class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white">
                         </div>
                         <div>
                             <label for="departamento" class="block text-xs font-semibold text-slate-400 mb-1">Departamento *</label>
                             <input type="text" id="departamento" name="departamento" value="{{ old('departamento', $ubicacion->departamento) }}" required
+                                   onchange="searchAddress()"
                                    class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white">
                         </div>
                     </div>
@@ -135,6 +141,7 @@
                         <div>
                             <label for="pais" class="block text-xs font-semibold text-slate-400 mb-1">País *</label>
                             <input type="text" id="pais" name="pais" value="{{ old('pais', $ubicacion->pais) }}" required
+                                   onchange="searchAddress()"
                                    class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white">
                         </div>
                         <div>
@@ -146,7 +153,18 @@
                 </div>
 
                 <div class="lg:col-span-7 space-y-2">
-                    <h3 class="text-xs font-extrabold text-cyan-400 uppercase tracking-wider">Ubicación Geográfica en Mapa</h3>
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-xs font-extrabold text-cyan-400 uppercase tracking-wider">Ubicación Geográfica en Mapa</h3>
+                        <div class="flex items-center space-x-2">
+                            <button type="button" onclick="searchAddress()" class="px-2.5 py-1 rounded-lg bg-cyan-600/20 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-600 hover:text-white text-[11px] font-bold transition">
+                                🔍 Ubicar Dirección
+                            </button>
+                            <a id="gmaps-btn" href="https://www.google.com/maps/search/?api=1&query={{ $ubicacion->latitud ?? -12.046374 }},{{ $ubicacion->longitud ?? -76.953500 }}" target="_blank" 
+                               class="px-2.5 py-1 rounded-lg bg-blue-600/20 text-blue-300 border border-blue-500/30 hover:bg-blue-600 hover:text-white text-[11px] font-bold transition">
+                                🗺️ Abrir en Google Maps ↗
+                            </a>
+                        </div>
+                    </div>
                     <div id="map" class="w-full h-72 rounded-2xl border border-slate-800 z-10"></div>
                 </div>
             </div>
@@ -229,23 +247,20 @@
 </div>
 
 <script>
+    let map, marker;
+
     document.addEventListener('DOMContentLoaded', function () {
         const defaultLat = {{ $ubicacion->latitud ?? -12.046374 }};
         const defaultLng = {{ $ubicacion->longitud ?? -76.953500 }};
 
-        const map = L.map('map').setView([defaultLat, defaultLng], 12);
+        map = L.map('map').setView([defaultLat, defaultLng], 14);
 
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            maxZoom: 19,
-            subdomains: 'abcd'
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+            maxZoom: 19
         }).addTo(map);
 
-        let marker = L.marker([defaultLat, defaultLng], { draggable: true }).addTo(map);
-
-        function updateCoords(lat, lng) {
-            document.getElementById('latitud').value = lat.toFixed(7);
-            document.getElementById('longitud').value = lng.toFixed(7);
-        }
+        marker = L.marker([defaultLat, defaultLng], { draggable: true }).addTo(map);
 
         map.on('click', function (e) {
             const lat = e.latlng.lat;
@@ -254,10 +269,46 @@
             updateCoords(lat, lng);
         });
 
-        marker.on('dragend', function (e) {
-            const position = marker.getLatLng();
-            updateCoords(position.lat, position.lng);
+        marker.on('dragend', function () {
+            const pos = marker.getLatLng();
+            updateCoords(pos.lat, pos.lng);
         });
+
+        updateCoords(defaultLat, defaultLng);
     });
+
+    function updateCoords(lat, lng) {
+        document.getElementById('latitud').value = lat.toFixed(7);
+        document.getElementById('longitud').value = lng.toFixed(7);
+
+        const gmapsBtn = document.getElementById('gmaps-btn');
+        if (gmapsBtn) {
+            gmapsBtn.href = `https://www.google.com/maps/search/?api=1&query=${lat.toFixed(7)},${lng.toFixed(7)}`;
+        }
+    }
+
+    async function searchAddress() {
+        const dir = document.getElementById('direccion')?.value || '';
+        const ciudad = document.getElementById('ciudad')?.value || '';
+        const dep = document.getElementById('departamento')?.value || '';
+        const pais = document.getElementById('pais')?.value || 'Perú';
+
+        const fullQuery = [dir, ciudad, dep, pais].filter(Boolean).join(', ');
+        if (!fullQuery || fullQuery.length < 3) return;
+
+        try {
+            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fullQuery)}`);
+            const data = await response.json();
+            if (data && data.length > 0) {
+                const lat = parseFloat(data[0].lat);
+                const lon = parseFloat(data[0].lon);
+                map.setView([lat, lon], 15);
+                marker.setLatLng([lat, lon]);
+                updateCoords(lat, lon);
+            }
+        } catch (err) {
+            console.error('Error al autoubicar dirección:', err);
+        }
+    }
 </script>
 @endsection

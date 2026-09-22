@@ -5,12 +5,15 @@
 @section('content')
 <div class="max-w-7xl mx-auto space-y-6">
 
-    <!-- Leaflet CSS & Dark Map Tile Styling -->
+    <!-- Leaflet CSS & JS -->
     <link rel="stylesheet" href="{{ asset('vendor/css/leaflet.css') }}" />
     <script src="{{ asset('vendor/js/leaflet.js') }}"></script>
 
-    <!-- Estilos Personalizados para integrar Popups de Leaflet con CartoDB Dark Matter -->
+    <!-- Estilos Personalizados para integrar Mapa con UI Oscura de CMMS -->
     <style>
+        .leaflet-tile {
+            filter: brightness(0.75) invert(1) contrast(2.2) hue-rotate(200deg) saturate(0.3) !important;
+        }
         .leaflet-popup-content-wrapper {
             background-color: #0f172a !important; /* slate-900 */
             color: #f8fafc !important; /* slate-50 */
@@ -51,7 +54,7 @@
         </a>
     </div>
 
-    <!-- Main Registration Container (Diseño Fiel a Imagen de Referencia) -->
+    <!-- Main Registration Container -->
     <div class="p-6 md:p-8 rounded-3xl bg-slate-900 border border-slate-800 shadow-2xl space-y-6">
         <form action="{{ route('ubicaciones.store') }}" method="POST" class="space-y-6">
             @csrf
@@ -59,7 +62,7 @@
             <!-- Bloque Superior: Código QR + Localización Padre + Nombre + Código -->
             <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
                 
-                <!-- QR Code Box (Esquina Superior Izquierda según Imagen) -->
+                <!-- QR Code Box -->
                 <div class="md:col-span-2 p-3 bg-slate-950 border border-slate-800 rounded-2xl flex flex-col items-center justify-center text-center space-y-2">
                     <img id="qr-preview" src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ $codigoSugerido }}" 
                          alt="QR Preview" class="w-28 h-28 rounded-lg bg-white p-1 shadow-md">
@@ -101,7 +104,7 @@
                 </div>
             </div>
 
-            <!-- Bloque Central: Dirección Geográfica (Izquierda) + Mapa Interactivo Dark (Derecha) -->
+            <!-- Bloque Central: Dirección Geográfica + Mapa Interactivo & Google Maps -->
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 pt-4 border-t border-slate-800">
                 
                 <!-- Campos Dirección (Columna Izquierda 5 Cols) -->
@@ -117,6 +120,7 @@
                     <div>
                         <label for="direccion" class="block text-xs font-semibold text-slate-400 mb-1">Dirección Fiscal / Referencia</label>
                         <input type="text" id="direccion" name="direccion" value="{{ old('direccion') }}" placeholder="Ej: Av. Industrial 1450, Mz. C Lote 4"
+                               onchange="searchAddress()"
                                class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:border-blue-500 focus:outline-none">
                     </div>
 
@@ -124,11 +128,13 @@
                         <div>
                             <label for="ciudad" class="block text-xs font-semibold text-slate-400 mb-1">Ciudad *</label>
                             <input type="text" id="ciudad" name="ciudad" value="{{ old('ciudad', 'Lima') }}" required
+                                   onchange="searchAddress()"
                                    class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:border-blue-500 focus:outline-none">
                         </div>
                         <div>
                             <label for="departamento" class="block text-xs font-semibold text-slate-400 mb-1">Departamento / Región *</label>
                             <input type="text" id="departamento" name="departamento" value="{{ old('departamento', 'Lima') }}" required
+                                   onchange="searchAddress()"
                                    class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:border-blue-500 focus:outline-none">
                         </div>
                     </div>
@@ -137,6 +143,7 @@
                         <div>
                             <label for="pais" class="block text-xs font-semibold text-slate-400 mb-1">País *</label>
                             <input type="text" id="pais" name="pais" value="{{ old('pais', 'Perú') }}" required
+                                   onchange="searchAddress()"
                                    class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:border-blue-500 focus:outline-none">
                         </div>
                         <div>
@@ -147,13 +154,21 @@
                     </div>
                 </div>
 
-                <!-- Mapa Geográfico Dark Theme (Columna Derecha 7 Cols según Imagen) -->
+                <!-- Mapa Geográfico (Columna Derecha 7 Cols) -->
                 <div class="lg:col-span-7 space-y-2">
                     <div class="flex items-center justify-between">
                         <h3 class="text-xs font-extrabold text-cyan-400 uppercase tracking-wider flex items-center space-x-1.5">
-                            <span>🗺️ Ubicación Geográfica en Mapa (Haz clic para fijar coordenadas)</span>
+                            <span>🗺️ Ubicación en Mapa</span>
                         </h3>
-                        <span class="text-[10px] text-slate-400">Lima / Provincias Perú</span>
+                        <div class="flex items-center space-x-2">
+                            <button type="button" onclick="searchAddress()" class="px-2.5 py-1 rounded-lg bg-cyan-600/20 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-600 hover:text-white text-[11px] font-bold transition">
+                                🔍 Ubicar Dirección
+                            </button>
+                            <a id="gmaps-btn" href="https://www.google.com/maps/search/?api=1&query=-12.046374,-76.953500" target="_blank" 
+                               class="px-2.5 py-1 rounded-lg bg-blue-600/20 text-blue-300 border border-blue-500/30 hover:bg-blue-600 hover:text-white text-[11px] font-bold transition">
+                                🗺️ Abrir en Google Maps ↗
+                            </a>
+                        </div>
                     </div>
 
                     <!-- Canvas del Mapa -->
@@ -161,7 +176,7 @@
                 </div>
             </div>
 
-            <!-- Bloque Inferior: Coordenadas, Tipo, Prioridad, Centro Costo, Presupuesto & Notas (Según Imagen) -->
+            <!-- Bloque Inferior: Coordenadas, Tipo, Prioridad, Centro Costo, Presupuesto & Notas -->
             <div class="pt-4 border-t border-slate-800 space-y-4">
                 <h3 class="text-xs font-extrabold text-indigo-400 uppercase tracking-wider">Clasificación & Operación</h3>
 
@@ -241,27 +256,23 @@
 
 </div>
 
-<!-- Leaflet Map Script with CartoDB Dark Tiles -->
+<!-- Leaflet Map Script & OpenStreetMap Geocoding + Google Maps Link -->
 <script>
+    let map, marker;
+
     document.addEventListener('DOMContentLoaded', function () {
-        const defaultLat = -12.046374;
-        const defaultLng = -76.953500;
+        const defaultLat = parseFloat(document.getElementById('latitud').value) || -12.046374;
+        const defaultLng = parseFloat(document.getElementById('longitud').value) || -76.953500;
 
-        const map = L.map('map').setView([defaultLat, defaultLng], 12);
+        map = L.map('map').setView([defaultLat, defaultLng], 13);
 
-        // CartoDB Dark Matter Tile Layer (Mapa en tono oscuro coordinado con la UI)
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-            subdomains: 'abcd',
+        // OpenStreetMap Standard Tiles (Garantizado sin marcas de API KEY)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
             maxZoom: 19
         }).addTo(map);
 
-        let marker = L.marker([defaultLat, defaultLng], { draggable: true }).addTo(map);
-
-        function updateCoords(lat, lng) {
-            document.getElementById('latitud').value = lat.toFixed(7);
-            document.getElementById('longitud').value = lng.toFixed(7);
-        }
+        marker = L.marker([defaultLat, defaultLng], { draggable: true }).addTo(map);
 
         map.on('click', function (e) {
             const lat = e.latlng.lat;
@@ -270,11 +281,47 @@
             updateCoords(lat, lng);
         });
 
-        marker.on('dragend', function (e) {
-            const position = marker.getLatLng();
-            updateCoords(position.lat, position.lng);
+        marker.on('dragend', function () {
+            const pos = marker.getLatLng();
+            updateCoords(pos.lat, pos.lng);
         });
+
+        updateCoords(defaultLat, defaultLng);
     });
+
+    function updateCoords(lat, lng) {
+        document.getElementById('latitud').value = lat.toFixed(7);
+        document.getElementById('longitud').value = lng.toFixed(7);
+
+        const gmapsBtn = document.getElementById('gmaps-btn');
+        if (gmapsBtn) {
+            gmapsBtn.href = `https://www.google.com/maps/search/?api=1&query=${lat.toFixed(7)},${lng.toFixed(7)}`;
+        }
+    }
+
+    async function searchAddress() {
+        const dir = document.getElementById('direccion')?.value || '';
+        const ciudad = document.getElementById('ciudad')?.value || '';
+        const dep = document.getElementById('departamento')?.value || '';
+        const pais = document.getElementById('pais')?.value || 'Perú';
+
+        const fullQuery = [dir, ciudad, dep, pais].filter(Boolean).join(', ');
+        if (!fullQuery || fullQuery.length < 3) return;
+
+        try {
+            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fullQuery)}`);
+            const data = await response.json();
+            if (data && data.length > 0) {
+                const lat = parseFloat(data[0].lat);
+                const lon = parseFloat(data[0].lon);
+                map.setView([lat, lon], 15);
+                marker.setLatLng([lat, lon]);
+                updateCoords(lat, lon);
+            }
+        } catch (err) {
+            console.error('Error al autoubicar dirección:', err);
+        }
+    }
 
     function updateQrPreview(code) {
         if (code.length > 2) {
