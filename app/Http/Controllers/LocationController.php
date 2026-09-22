@@ -71,7 +71,7 @@ class LocationController extends Controller
 
     public function create()
     {
-        $padres = Location::orderBy('nombre', 'asc')->get();
+        $padres = Location::where('activo', true)->orderBy('nombre', 'asc')->get();
         
         $year = date('Y');
         $last = Location::whereYear('created_at', $year)->orderBy('id', 'desc')->first();
@@ -122,7 +122,7 @@ class LocationController extends Controller
     public function edit($id)
     {
         $ubicacion = Location::findOrFail($id);
-        $padres = Location::where('id', '!=', $id)->orderBy('nombre', 'asc')->get();
+        $padres = Location::where('activo', true)->where('id', '!=', $id)->orderBy('nombre', 'asc')->get();
 
         return view('ubicaciones.edit', compact('ubicacion', 'padres'));
     }
