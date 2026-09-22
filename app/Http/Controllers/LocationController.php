@@ -32,9 +32,24 @@ class LocationController extends Controller
 
         $ubicaciones = $query->orderBy('id', 'desc')->paginate(12)->withQueryString();
 
-        // Árbol Jerárquico de Ubicaciones (Sedes / Ubicaciones Raíz)
-        $arbolUbicaciones = Location::whereNull('parent_id')
-            ->with(['children.children', 'children.activos', 'activos'])
+        // Árbol Jerárquico de Ubicaciones (Sedes / Ubicaciones Raíz Activas)
+        $arbolUbicaciones = Location::where('activo', true)
+            ->whereNull('parent_id')
+            ->with([
+                'children' => function ($q) {
+                    $q->where('activo', true)->with([
+                        'children' => function ($q2) {
+                            $q2->where('activo', true);
+                        },
+                        'activos' => function ($q3) {
+                            $q3->where('activo', true);
+                        }
+                    ]);
+                },
+                'activos' => function ($q3) {
+                    $q3->where('activo', true);
+                }
+            ])
             ->orderBy('nombre', 'asc')
             ->get();
 
