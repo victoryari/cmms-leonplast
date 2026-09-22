@@ -129,8 +129,10 @@ foreach ($envOverrides as $key => $value) {
 }
 
 // ============================================================
-// PASO 4: Normalizar REQUEST_URI para Serverless Vercel (Solo rutas API /v1/)
+// PASO 4: Normalizar SERVER para Serverless Vercel
 // ============================================================
+$_SERVER['SCRIPT_NAME'] = '/index.php';
+$_SERVER['PHP_SELF'] = '/index.php';
 if (isset($_SERVER['REQUEST_URI'])) {
     $requestUri = $_SERVER['REQUEST_URI'];
     if (str_starts_with($requestUri, '/v1/')) {
