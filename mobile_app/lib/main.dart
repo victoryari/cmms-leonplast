@@ -226,6 +226,9 @@ class _WorkOrdersListViewState extends State<WorkOrdersListView> {
     if (estado == 'En_Progreso' || estado == 'En_Proceso') {
       estadoColor = Colors.cyanAccent;
       estadoTexto = 'En Proceso ⚙️';
+    } else if (estado == 'En_Pausa') {
+      estadoColor = Colors.orangeAccent;
+      estadoTexto = 'En Pausa ⏸️';
     } else if (estado == 'Completada' || estado == 'Resuelta') {
       estadoColor = Colors.greenAccent;
       estadoTexto = 'Completada ✓';
@@ -319,6 +322,118 @@ class _WorkOrdersListViewState extends State<WorkOrdersListView> {
             }
           }
 
+          void showPauseModal() {
+            String motivoSeleccionado = 'Falta_Repuesto';
+            final obsController = TextEditingController();
+
+            showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                backgroundColor: const Color(0xFF1E293B),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                title: const Row(
+                  children: [
+                    Icon(Icons.pause_circle_filled, color: Colors.orangeAccent),
+                    SizedBox(width: 8),
+                    Text('Registrar Parada de OT', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                content: StatefulBuilder(
+                  builder: (ctx, setDialogState) {
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Motivo de la Parada:', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 6),
+                        DropdownButtonFormField<String>(
+                          initialValue: motivoSeleccionado,
+                          dropdownColor: const Color(0xFF0F172A),
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: const Color(0xFF0F172A),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                          ),
+                          items: const [
+                            DropdownMenuItem(value: 'Falta_Repuesto', child: Text('🏬 Falta de Repuestos / Material', style: TextStyle(color: Colors.white, fontSize: 12))),
+                            DropdownMenuItem(value: 'Fin_Jornada', child: Text('⏰ Fin de Turno / Jornada Laboral', style: TextStyle(color: Colors.white, fontSize: 12))),
+                            DropdownMenuItem(value: 'Operativa_Planta', child: Text('⚙️ Detención Operativa de Planta', style: TextStyle(color: Colors.white, fontSize: 12))),
+                            DropdownMenuItem(value: 'Permiso_Seguridad', child: Text('🛡️ Bloqueo de Seguridad / PTS', style: TextStyle(color: Colors.white, fontSize: 12))),
+                            DropdownMenuItem(value: 'Otro', child: Text('📝 Otro Motivo Técnico', style: TextStyle(color: Colors.white, fontSize: 12))),
+                          ],
+                          onChanged: (val) {
+                            if (val != null) {
+                              setDialogState(() {
+                                motivoSeleccionado = val;
+                              });
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        const Text('Observaciones de la Parada:', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 6),
+                        TextField(
+                          controller: obsController,
+                          maxLines: 2,
+                          style: const TextStyle(color: Colors.white, fontSize: 12),
+                          decoration: InputDecoration(
+                            hintText: 'Detalle la razón del estancamiento...',
+                            hintStyle: const TextStyle(color: Colors.white38, fontSize: 11),
+                            filled: true,
+                            fillColor: const Color(0xFF0F172A),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Cancelar', style: TextStyle(color: Colors.white60)),
+                  ),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orangeAccent,
+                      foregroundColor: Colors.black,
+                    ),
+                    onPressed: () async {
+                      await DatabaseHelper.instance.updateLocalOtStatus(
+                        ot['id'],
+                        'En_Pausa',
+                      );
+
+                      await DatabaseHelper.instance.addToSyncQueue(
+                        '/ordenes-trabajo/${ot['id']}/pausar',
+                        'POST',
+                        {
+                          'motivo_pausa': motivoSeleccionado,
+                          'observaciones': obsController.text,
+                        },
+                      );
+
+                      setModalState(() {
+                        estadoActual = 'En_Pausa';
+                      });
+
+                      _loadWorkOrders();
+
+                      if (!context.mounted) return;
+                      Navigator.pop(ctx);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('⏸️ OT Pausada. Estado actualizado a En Pausa.')),
+                      );
+                    },
+                    icon: const Icon(Icons.pause, size: 18),
+                    label: const Text('Confirmar Parada', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+            );
+          }
+
           return SingleChildScrollView(
             child: Padding(
               padding: EdgeInsets.only(
@@ -346,25 +461,31 @@ class _WorkOrdersListViewState extends State<WorkOrdersListView> {
                         decoration: BoxDecoration(
                           color: (estadoActual == 'En_Progreso' || estadoActual == 'En_Proceso')
                               ? Colors.cyan.withValues(alpha: 0.2)
-                              : (estadoActual == 'Completada')
-                                  ? Colors.green.withValues(alpha: 0.2)
-                                  : Colors.amber.withValues(alpha: 0.2),
+                              : (estadoActual == 'En_Pausa')
+                                  ? Colors.orange.withValues(alpha: 0.2)
+                                  : (estadoActual == 'Completada')
+                                      ? Colors.green.withValues(alpha: 0.2)
+                                      : Colors.amber.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
                           (estadoActual == 'En_Progreso' || estadoActual == 'En_Proceso')
                               ? 'En Proceso'
-                              : (estadoActual == 'Completada')
-                                  ? 'Completada'
-                                  : 'Asignada',
+                              : (estadoActual == 'En_Pausa')
+                                  ? 'En Pausa'
+                                  : (estadoActual == 'Completada')
+                                      ? 'Completada'
+                                      : 'Asignada',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 11,
                             color: (estadoActual == 'En_Progreso' || estadoActual == 'En_Proceso')
                                 ? Colors.cyanAccent
-                                : (estadoActual == 'Completada')
-                                    ? Colors.greenAccent
-                                    : Colors.amber,
+                                : (estadoActual == 'En_Pausa')
+                                    ? Colors.orangeAccent
+                                    : (estadoActual == 'Completada')
+                                        ? Colors.greenAccent
+                                        : Colors.amber,
                           ),
                         ),
                       ),
@@ -372,8 +493,8 @@ class _WorkOrdersListViewState extends State<WorkOrdersListView> {
                   ),
                   const SizedBox(height: 16),
 
-                  // BOTÓN 1: Iniciar OT (Cambiar estado a En_Progreso)
-                  if (estadoActual != 'En_Progreso' && estadoActual != 'En_Proceso' && estadoActual != 'Completada')
+                  // BOTONES DE CONTROL DE ESTADO (INICIAR, PAUSAR, REANUDAR)
+                  if (estadoActual != 'En_Progreso' && estadoActual != 'En_Proceso' && estadoActual != 'En_Pausa' && estadoActual != 'Completada')
                     Container(
                       margin: const EdgeInsets.only(bottom: 16),
                       width: double.infinity,
@@ -412,6 +533,62 @@ class _WorkOrdersListViewState extends State<WorkOrdersListView> {
                         },
                         icon: const Icon(Icons.play_arrow_rounded, size: 22),
                         label: const Text('▶️ INICIAR OT (Marcar En Proceso)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                      ),
+                    ),
+
+                  if (estadoActual == 'En_Progreso' || estadoActual == 'En_Proceso')
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.orangeAccent,
+                          side: const BorderSide(color: Colors.orangeAccent),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: showPauseModal,
+                        icon: const Icon(Icons.pause_circle_filled_rounded, size: 20),
+                        label: const Text('⏸️ REGISTRAR PARADA DE OT (Pausar)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                      ),
+                    ),
+
+                  if (estadoActual == 'En_Pausa')
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.cyan,
+                          foregroundColor: Colors.black,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: () async {
+                          await DatabaseHelper.instance.updateLocalOtStatus(
+                            ot['id'],
+                            'En_Progreso',
+                          );
+
+                          await DatabaseHelper.instance.addToSyncQueue(
+                            '/ordenes-trabajo/${ot['id']}/reanudar',
+                            'POST',
+                            {},
+                          );
+
+                          setModalState(() {
+                            estadoActual = 'En_Progreso';
+                          });
+
+                          _loadWorkOrders();
+
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('▶️ OT Reanudada. Estado actualizado a En Proceso.')),
+                          );
+                        },
+                        icon: const Icon(Icons.play_arrow_rounded, size: 22),
+                        label: const Text('▶️ REANUDAR OT (Continuar Mantenimiento)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                       ),
                     ),
 
